@@ -1,7 +1,7 @@
 import telnetlib, json
 
 class CogWorld(object):
-    """This is a simple class for connecting with CogWorld"""
+    """This is a simple package for connecting with CogWorld"""
     
     def __init__(self, host, port, id):
         super(CogWorld, self).__init__()
