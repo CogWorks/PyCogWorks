@@ -1,4 +1,4 @@
-import telnetlib, json
+import socket, telnetlib, json
 
 class CogWorld(object):
     """This is a simple package for connecting with CogWorld"""
@@ -10,14 +10,19 @@ class CogWorld(object):
         self.id = id
         
     def connect(self):
-        self.t = telnetlib.Telnet(self.host, self.port)
+        ret = None
+        try:
+            self.t = telnetlib.Telnet(self.host, self.port)
+        except socket.error, msg:
+            ret = msg
+        return ret
         
     def disconnect(self):
         self.t.close()
         
     def __sendCommand(self, command):
         self.t.write(command + '\n')
-        return json.loads(self.t.read_until("\n"))['result']
+        return json.loads(self.t.read_until('\n'))['result']
     
     def cwGetVersion(self):
         cmd = {'method':'cwGetVersion','id':self.id}
@@ -32,9 +37,9 @@ class CogWorld(object):
         return self.__sendCommand(json.dumps(cmd))
     
     def cwEegEventNotify(self, duration, type_code, label, data):
-        cmd = {'method':'cwEegEndRecord','params':[duration,type_code,label,data],'id':self.id}
+        cmd = {'method':'cwEegEventNotify','params':[duration,type_code,label,data],'id':self.id}
         return self.__sendCommand(json.dumps(cmd))
     
     def cwLogInfo(self, list):
-        cmd = {'method':'cwEegEndRecord','params':[list],'id':self.id}
+        cmd = {'method':'cwLogInfo','params':[list],'id':self.id}
         return self.__sendCommand(json.dumps(cmd))
