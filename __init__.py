@@ -43,3 +43,7 @@ class CogWorld(object):
     def cwLogInfo(self, list):
         cmd = {'method':'cwLogInfo','params':[list],'id':self.id}
         return self.__sendCommand(json.dumps(cmd))
+    
+    def cwGetEyetrackerIp(self):
+        cmd = {'method':'cwGetEyetrackerIp','id':self.id}
+        return self.__sendCommand(json.dumps(cmd))
