@@ -38,5 +38,12 @@ class EyeGaze(object):
     
     def calibrate(self):
         msg = self._format_message(10)
-        print "%s" % (msg)
+        self._sendCommand(msg)
+        
+    def start(self):
+        msg = self._format_message(30)
+        self._sendCommand(msg)
+        
+    def stop(self):
+        msg = self._format_message(31)
         self._sendCommand(msg)
