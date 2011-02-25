@@ -1,1 +1,1 @@
-__all__ = ['CogWorld', 'EyeGaze']
+__all__ = ['cogworld', 'eyegaze']
