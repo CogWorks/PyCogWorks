@@ -20,30 +20,30 @@ class CogWorld(object):
     def disconnect(self):
         self.t.close()
         
-    def __sendCommand(self, command):
+    def _sendCommand(self, command):
         self.t.write(command + '\n')
         return json.loads(self.t.read_until('\n'))['result']
     
     def cwGetVersion(self):
         cmd = {'method':'cwGetVersion','id':self.id}
-        return self.__sendCommand(json.dumps(cmd))
+        return self._sendCommand(json.dumps(cmd))
     
     def cwEegBeginRecord(self):
         cmd = {'method':'cwEegBeginRecord','id':self.id}
-        return self.__sendCommand(json.dumps(cmd))
+        return self._sendCommand(json.dumps(cmd))
     
     def cwEegEndRecord(self):
         cmd = {'method':'cwEegEndRecord','id':self.id}
-        return self.__sendCommand(json.dumps(cmd))
+        return self._sendCommand(json.dumps(cmd))
     
     def cwEegEventNotify(self, duration, type_code, label, data):
         cmd = {'method':'cwEegEventNotify','params':[duration,type_code,label,data],'id':self.id}
-        return self.__sendCommand(json.dumps(cmd))
+        return self._sendCommand(json.dumps(cmd))
     
     def cwLogInfo(self, list):
         cmd = {'method':'cwLogInfo','params':[list],'id':self.id}
-        return self.__sendCommand(json.dumps(cmd))
+        return self._sendCommand(json.dumps(cmd))
     
     def cwGetEyetrackerIp(self):
         cmd = {'method':'cwGetEyetrackerIp','id':self.id}
-        return self.__sendCommand(json.dumps(cmd))
+        return self._sendCommand(json.dumps(cmd))
