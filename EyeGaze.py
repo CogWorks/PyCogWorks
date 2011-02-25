@@ -17,7 +17,7 @@ class EyeGaze(object):
         return ret
     
     def __sendCommand(self, msg):
-        self.t.write(msg + '\r\n')
+        self.t.write(msg)
     
     def __mod(self, x, y):
         return int(x / y), int(math.fmod(x, y))
