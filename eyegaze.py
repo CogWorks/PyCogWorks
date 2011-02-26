@@ -1,4 +1,4 @@
-import socket, telnetlib, math
+import socket, math
 
 class EyeGaze(object):
     """This is a simple package for connecting with LC Technologies EGServer"""
@@ -11,13 +11,18 @@ class EyeGaze(object):
     def connect(self):
         ret = None
         try:
-            self.t = telnetlib.Telnet(self.host, self.port)
+            self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.s.connect((self.host, self.port))
         except socket.error, msg:
             ret = msg
         return ret
     
     def _sendCommand(self, msg):
-        self.t.write(msg)
+        n = 8 - len(msg) % 8
+        pad = ''
+        for a in range(0,n):
+            pad = '%s%s' % (pad, '\x00')
+        self.s.send('%s%s' % (msg, pad))
     
     def _mod(self, x, y):
         return int(x / y), int(math.fmod(x, y))
