@@ -1,4 +1,4 @@
-import socket, math
+import socket, math, string
 
 class EyeGaze(object):
     """This is a simple package for connecting with LC Technologies EGServer"""
@@ -39,7 +39,10 @@ class EyeGaze(object):
         i1, r1 = self._mod(message_length, 65536)
         i2, r2 = self._mod(r1, 256)
         header = "%c%c%c%c" % (i1, i2, r2, command)
-        return "%s%s%s" % (header, body, self._checksum(header, body))
+        msg = "%s%s%s" % (header, body, self._checksum(header, body))
+        l = len(msg)
+        s = 8 - l % 8 + l
+        return string.ljust(msg,s,'\x00')
     
     def calibrate(self):
         msg = self._format_message(10)
