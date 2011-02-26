@@ -12,18 +12,6 @@ class EyeGaze(object):
     def _read_loop(self):
         pass   
         
-    def connect(self):
-        """Connect to EGServer"""
-        ret = None
-        try:
-            self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.s.connect((self.host, self.port))
-            self.thread = Thread(target=self._read_loop)
-            self.thread.run()
-        except socket.error, msg:
-            ret = msg
-        return ret
-    
     def _sendCommand(self, msg):
         self.s.send(msg)
     
@@ -46,24 +34,37 @@ class EyeGaze(object):
         l = len(msg)
         s = 8 - l % 8 + l
         return string.ljust(msg,s,'\x00')
-    
-    def test_message(self, command, body=""):
-        return self._format_message(command, body)
-    
-    def calibrate(self):
-        """Start calibration procedure"""
-        msg = self._format_message(10)
-        self._sendCommand(msg)
-        
-    def data_start(self):
-        """Start data logging"""
-        msg = self._format_message(30)
-        self._sendCommand(msg)
-        
-    def data_stop(self):
-        """Stop data logging"""
-        msg = self._format_message(31)
-        self._sendCommand(msg)
         
     def __del__(self):
         pass
+        
+    def connect(self):
+        """Connect to EGServer"""
+        ret = None
+        try:
+            self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.s.connect((self.host, self.port))
+            self.thread = Thread(target=self._read_loop)
+            self.thread.run()
+        except socket.error, msg:
+            ret = msg
+        return ret
+    
+    def disconnect(self):
+        """Stop data logging"""
+        self._sendCommand(self._format_message(32))
+    
+    def calibrate(self):
+        """Start calibration procedure"""
+        self._sendCommand(self._format_message(10))
+        
+    def data_start(self):
+        """Start data logging"""
+        self._sendCommand(self._format_message(30))
+        
+    def data_stop(self):
+        """Stop data logging"""
+        self._sendCommand(self._format_message(31))
+        
+    def test_message(self, command, body=""):
+        return self._format_message(command, body)
