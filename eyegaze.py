@@ -1,4 +1,4 @@
-import socket, math, string
+import socket, math, string, pygame
 from threading import Thread
 
 class EyeGaze(object):
@@ -24,59 +24,59 @@ class EyeGaze(object):
             body = map(ord,self.s.recv(body_len - 1))
             accum += sum(body)
         chksum = ord(self.s.recv(1))
-        if chksum == ('\xff' & accum):
+        if chksum == (255 & accum):
             ret = (header[3],body)
         return ret
             
     def _read_loop(self):
         while self.read_messages:
-            val = self.read_message()
+            val = self._read_message()
             if val:
                 if val[0] == 0: # eg-gaze-info
                     pass
                 elif val[0] == 11: # eg-ws-query
-                    w,h = self.screen.get_size()
-                    body = "%04d,%04d,%04d,%04d,%04d,%04d,%04d,%04d" % (340, 272, w, h, w, h, 0, 0)                        
+                    body = "%4d,%4d,%4d,%4d,%4d,%4d,%4d,%4d" % (340, 272, self.width, self.height, self.width, self.height, 0, 0)               
                     self._send_message(self._format_message(12, body))
                 elif val[0] == 13: # eg-clear-screen
-                    pygame.event.post(pygame.event.Event(pygame.USEREVENT, {'type': 'clear'}))
+                    pygame.event.clear(pygame.USEREVENT)
+                    code = {'code': 'clear', 'color': self.eg_color}
+                    pygame.event.post(pygame.event.Event(pygame.USEREVENT, dict(code)))
                 elif val[0] == 14: # eg-set-color
-                    self.eg_color = (ord(val[1][2]),ord(val[1][1]),ord(val[1][0]))
+                    self.eg_color = (val[1][2],val[1][1],val[1][0])
                 elif val[0] == 15: # eg-set-diameter
-                    self.eg_diameter = (ord(val[1][0]) * 256) + ord(val[1][1])
+                    self.eg_diameter = (val[1][0] * 256) + val[1][1]
                 elif val[0] == 16: # eg-draw-circle
                     code = {
-                            'type': 'circle',
-                            'x': (ord(val[1][0]) * 256) + ord(val[1][1]),
-                            'y': (ord(val[1][2]) * 256) + ord(val[1][3]),
+                            'code': 'circle',
+                            'x': (val[1][0] * 256) + val[1][1],
+                            'y': (val[1][2] * 256) + val[1][3],
                             'diameter': self.eg_diameter,
                             'color': self.eg_color
                             }
-                    pygame.event.post(pygame.event.Event(pygame.USEREVENT, code))
+                    pygame.event.post(pygame.event.Event(pygame.USEREVENT, dict(code)))
                 elif val[0] == 17: # eg-draw-cross
                     code = {
-                            'type': 'cross',
-                            'x': (ord(val[1][0]) * 256) + ord(val[1][1]),
-                            'y': (ord(val[1][2]) * 256) + ord(val[1][3]),
+                            'code': 'cross',
+                            'x': (val[1][0] * 256) + val[1][1],
+                            'y': (val[1][2] * 256) + val[1][3],
                             'diameter': self.eg_diameter,
                             'color': self.eg_color
                             }
-                    pygame.event.post(pygame.event.Event(pygame.USEREVENT, code))
+                    pygame.event.post(pygame.event.Event(pygame.USEREVENT, dict(code)))
                 elif val[0] == 18: # eg-draw-text
                     code = {
-                            'type': 'text',
-                            'x': (ord(val[1][0]) * 256) + ord(val[1][1]),
-                            'y': (ord(val[1][2]) * 256) + ord(val[1][3]),
-                            'diameter': self.eg_diameter,
+                            'code': 'text',
+                            'x': (val[1][0] * 256) + val[1][1],
+                            'y': (val[1][2] * 256) + val[1][3],
                             'color': self.eg_color,
-                            'text': val[1][4:]
+                            'text': "".join(map(chr,val[1][4:]))
                             }
-                    pygame.event.post(pygame.event.Event(pygame.USEREVENT, code))
+                    pygame.event.post(pygame.event.Event(pygame.USEREVENT, dict(code)))
                 elif val[0] == 19: # eg-cal-complete
-                    pygame.event.post(pygame.event.Event(pygame.USEREVENT, {'type': 'complete'}))
+                    pygame.event.post(pygame.event.Event(pygame.USEREVENT, dict({'code': 'complete'})))
                 elif val[0] == 20: # eg-cal-aborted
                     pygame.event.clear(pygame.USEREVENT)
-                    pygame.event.post(pygame.event.Event(pygame.USEREVENT, {'type': 'abort'}))
+                    pygame.event.post(pygame.event.Event(pygame.USEREVENT, dict({'code': 'abort'})))
         
     def _send_message(self, msg):
         self.s.send(msg)
@@ -109,7 +109,7 @@ class EyeGaze(object):
             self.s.connect((self.host, self.port))
             self.read_messages = True
             self.thread = Thread(target=self._read_loop)
-            self.thread.run()
+            self.thread.start()
         except socket.error, msg:
             ret = msg
         return ret
@@ -127,8 +127,12 @@ class EyeGaze(object):
         else:
             pygame.display.init()
             pygame.font.init()
+            pygame.mouse.set_visible(False)
             self.screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN|pygame.HWSURFACE|pygame.DOUBLEBUF)
-            self.eg_font = pygame.font.Font(None, 14)
+            self.width, self.height = self.screen.get_size()
+            self.eg_font = pygame.font.Font(None, 24)
+            self.surf = pygame.Surface((self.width, self.height))
+            self.surf_rect = self.surf.get_rect()
         self._send_message(self._format_message(10))
         ret = True
         cont = True
@@ -139,32 +143,32 @@ class EyeGaze(object):
                         ret = False
                         cont = False
                 elif event.type == pygame.USEREVENT:
-                    if event.code.type == 'clear':
-                        self.screen.fill((0,0,0))
-                        pygame.display.flip()
-                    elif event.code.type == 'circle':
-                        pygame.draw.circle(self.screen, event.code.color, 
-                                           (event.code.x,event.code.y),
-                                           event.code.diameter/2)
-                        pygame.display.flip()
-                    elif event.code.type == 'cross':
-                        pygame.draw.line(self.screen, event.code.color,
-                                         ((event.code.x-event.code.diameter/2), event.code.y),
-                                         ((event.code.x+event.code.diameter/2), event.code.y))
-                        pygame.draw.line(self.screen, event.code.color,
-                                         (event.code.x, (event.code.y-event.code.diameter/2)),
-                                         (event.code.x, (event.code.y+event.code.diameter/2)))
-                        pygame.display.flip()
-                    elif event.code.type == 'text':
-                        text = self.eg_font.render(event.code.text, True, event.code.color)
+                    print event
+                    if event.code == 'clear':
+                        self.surf.fill(event.color)
+                    elif event.code == 'circle':
+                        pygame.draw.circle(self.surf, event.color, 
+                                           (event.x,event.y),
+                                           event.diameter)
+                    elif event.code == 'cross':
+                        pygame.draw.line(self.surf, event.color,
+                                         ((event.x-event.diameter), event.y),
+                                         ((event.x+event.diameter), event.y))
+                        pygame.draw.line(self.surf, event.color,
+                                         (event.x, (event.y-event.diameter)),
+                                         (event.x, (event.y+event.diameter)))
+                    elif event.code == 'text':
+                        text = self.eg_font.render(event.text, True, event.color)
                         text_rect = text.get_rect()
-                        text_rect.center = (event.code.x, event.code.y)
-                        pygame.display.flip()
-                    elif event.code.type == 'complete':
+                        text_rect.center = (event.x, event.y)
+                        self.surf.blit(text, text_rect)
+                    elif event.code == 'complete':
                         cont = False
-                    elif event.code.type == 'abort':
+                    elif event.code == 'abort':
                         ret = False
                         cont = False
+            self.screen.blit(self.surf, self.surf_rect)
+            pygame.display.flip()
         return ret
         
     def data_start(self):
