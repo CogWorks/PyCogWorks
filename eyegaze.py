@@ -9,7 +9,7 @@ class EyeGaze(object):
         self.host = host
         self.port = port
         self.s = None
-        
+        self.do_calibration = False
         self.eg_color = (0,0,0)
         self.eg_diameter = 0
         self.eg_font = None
@@ -31,6 +31,7 @@ class EyeGaze(object):
     def _read_loop(self):
         while self.read_messages:
             val = self._read_message()
+            code = None
             if val:
                 if val[0] == 0: # eg-gaze-info
                     pass
@@ -38,9 +39,7 @@ class EyeGaze(object):
                     body = "%4d,%4d,%4d,%4d,%4d,%4d,%4d,%4d" % (340, 272, self.width, self.height, self.width, self.height, 0, 0)               
                     self._send_message(self._format_message(12, body))
                 elif val[0] == 13: # eg-clear-screen
-                    pygame.event.clear(pygame.USEREVENT)
                     code = {'code': 'clear', 'color': self.eg_color}
-                    pygame.event.post(pygame.event.Event(pygame.USEREVENT, dict(code)))
                 elif val[0] == 14: # eg-set-color
                     self.eg_color = (val[1][2],val[1][1],val[1][0])
                 elif val[0] == 15: # eg-set-diameter
@@ -53,7 +52,6 @@ class EyeGaze(object):
                             'diameter': self.eg_diameter,
                             'color': self.eg_color
                             }
-                    pygame.event.post(pygame.event.Event(pygame.USEREVENT, dict(code)))
                 elif val[0] == 17: # eg-draw-cross
                     code = {
                             'code': 'cross',
@@ -62,7 +60,6 @@ class EyeGaze(object):
                             'diameter': self.eg_diameter,
                             'color': self.eg_color
                             }
-                    pygame.event.post(pygame.event.Event(pygame.USEREVENT, dict(code)))
                 elif val[0] == 18: # eg-draw-text
                     code = {
                             'code': 'text',
@@ -71,12 +68,13 @@ class EyeGaze(object):
                             'color': self.eg_color,
                             'text': "".join(map(chr,val[1][4:]))
                             }
-                    pygame.event.post(pygame.event.Event(pygame.USEREVENT, dict(code)))
                 elif val[0] == 19: # eg-cal-complete
-                    pygame.event.post(pygame.event.Event(pygame.USEREVENT, dict({'code': 'complete'})))
+                    code = {'code': 'complete'}
                 elif val[0] == 20: # eg-cal-aborted
                     pygame.event.clear(pygame.USEREVENT)
-                    pygame.event.post(pygame.event.Event(pygame.USEREVENT, dict({'code': 'abort'})))
+                    code = {'code': 'abort'}             
+                if code and self.do_calibration:
+                    pygame.event.post(pygame.event.Event(pygame.USEREVENT, dict(code)))
         
     def _send_message(self, msg):
         self.s.send(msg)
@@ -122,9 +120,11 @@ class EyeGaze(object):
     
     def calibrate(self, screen=pygame.display.get_surface()):
         """Start calibration procedure"""
+        standalone = False
         if screen:
             self.screen = screen
         else:
+            standalone = True
             pygame.display.init()
             pygame.font.init()
             pygame.mouse.set_visible(False)
@@ -135,13 +135,15 @@ class EyeGaze(object):
             self.surf_rect = self.surf.get_rect()
         self._send_message(self._format_message(10))
         ret = True
-        cont = True
-        while cont:
+        self.do_calibration = True
+        while self.do_calibration:
+            self.screen.blit(self.surf, self.surf_rect)
+            pygame.display.flip()
             for event in pygame.event.get():
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
                         ret = False
-                        cont = False
+                        self.do_calibration = False
                 elif event.type == pygame.USEREVENT:
                     print event
                     if event.code == 'clear':
@@ -163,12 +165,12 @@ class EyeGaze(object):
                         text_rect.center = (event.x, event.y)
                         self.surf.blit(text, text_rect)
                     elif event.code == 'complete':
-                        cont = False
+                        self.do_calibration = False
                     elif event.code == 'abort':
                         ret = False
-                        cont = False
-            self.screen.blit(self.surf, self.surf_rect)
-            pygame.display.flip()
+                        self.do_calibration = False
+        if standalone:
+            pygame.display.quit()   
         return ret
         
     def data_start(self):
