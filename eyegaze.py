@@ -152,11 +152,11 @@ class EyeGaze(object):
                                            event.diameter)
                     elif event.code == 'cross':
                         pygame.draw.line(self.surf, event.color,
-                                         ((event.x-event.diameter), event.y),
-                                         ((event.x+event.diameter), event.y))
+                                         ((event.x-event.diameter/2), event.y),
+                                         ((event.x+event.diameter/2), event.y))
                         pygame.draw.line(self.surf, event.color,
-                                         (event.x, (event.y-event.diameter)),
-                                         (event.x, (event.y+event.diameter)))
+                                         (event.x, (event.y-event.diameter/2)),
+                                         (event.x, (event.y+event.diameter/2)))
                     elif event.code == 'text':
                         text = self.eg_font.render(event.text, True, event.color)
                         text_rect = text.get_rect()
