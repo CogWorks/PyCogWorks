@@ -144,8 +144,18 @@ class EyeGaze(object):
         self._send_message(self._format_message(10))
         ret = True
         self.do_calibration = True
+        circles = []
         while self.do_calibration:
-            self.screen.blit(self.surf, self.surf_rect)
+            tmp = self.surf.copy()
+            i = 0
+            while i < len(circles):
+                pygame.draw.circle(tmp, circles[i][0],(circles[i][1],circles[i][2]), circles[i][3])
+                pygame.draw.circle(tmp, circles[i][0], (circles[i][1],circles[i][2]), 1)
+                if c[4] == 0:
+                    circles.pop(i)
+                else:
+                    i += 1 
+            self.screen.blit(tmp, self.surf_rect)
             pygame.display.flip()
             for event in pygame.event.get():
                 if event.type == pygame.KEYDOWN:
@@ -157,10 +167,7 @@ class EyeGaze(object):
                     if event.code == 'clear':
                         self.surf.fill(self.bg_color)
                     elif event.code == 'circle':
-                        pygame.draw.circle(self.surf, event.color,
-                                           (event.x,event.y), event.diameter)
-                        pygame.draw.circle(self.surf, event.color,
-                                           (event.x,event.y), 1)
+                        circles.append((event.color, event.x, event.y, event.diameter, event.save))
                     elif event.code == 'cross':
                         pygame.draw.line(self.surf, event.color,
                                          (event.x-event.diameter/2, event.y),
