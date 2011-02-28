@@ -4,6 +4,30 @@ from threading import Thread
 class EyeGaze(object):
     """This is a simple package for connecting with LC Technologies EGServer"""
     
+    GAZEINFO                = 0
+    VERGENCE                = 5
+    IMAGEDATA               = 81
+    
+    CALIBRATE               = 10
+    WORKSTATION_QUERY       = 11
+    WORKSTATION_RESPONSE    = 12
+    CLEAR_SCREEN            = 13
+    SET_COLOR               = 14
+    SET_DIAMETER            = 15
+    DRAW_CIRCLE             = 16
+    DRAW_CROSS              = 17
+    DISPLAY_TEXT            = 18
+    CALIBRATION_COMPLETE    = 19
+    CALIBRATION_ABORTED     = 20
+    TRACKING_ACTIVE         = 22
+    TRACKING_INACTIVE       = 23
+    
+    BEGIN_SENDING_DATA      = 30
+    STOP_SENDING_DATA       = 31
+    CALIBRATE_ABORT         = 21
+    BEGIN_SENDING_VERGENCE  = 40
+    STOP_SENDING_VERGENCE   = 41
+    
     def __init__(self, host, port):
         super(EyeGaze, self).__init__()
         self.host = host
@@ -34,9 +58,9 @@ class EyeGaze(object):
             val = self._read_message()
             code = None
             if val:
-                if val[0] == 0: # eg-gaze-info
+                if val[0] == self.GAZEINFO:
                     pass
-                elif val[0] == 11: # eg-ws-query
+                elif val[0] == self.WORKSTATION_QUERY:
                     body = "%4d,%4d,%4d,%4d,%4d,%4d,%4d,%4d" % (340, 272,
                                                                 self.width,
                                                                 self.height,
@@ -44,42 +68,42 @@ class EyeGaze(object):
                                                                 self.height,
                                                                 0, 0)               
                     self._send_message(self._format_message(12, body))
-                elif val[0] == 13: # eg-clear-screen
-                    code = {'code': 'clear'}
-                elif val[0] == 14: # eg-set-color
+                elif val[0] == self.CLEAR_SCREEN:
+                    code = {'code': val[0]}
+                elif val[0] == self.SET_COLOR:
                     self.eg_color = (val[1][2],val[1][1],val[1][0])
-                elif val[0] == 15: # eg-set-diameter
+                elif val[0] == self.SET_DIAMETER:
                     self.eg_diameter = (val[1][0] * 256) + val[1][1]
-                elif val[0] == 16: # eg-draw-circle
+                elif val[0] == self.DRAW_CIRCLE:
                     code = {
-                            'code': 'circle',
+                            'code': val[0],
                             'x': (val[1][0] * 256) + val[1][1],
                             'y': (val[1][2] * 256) + val[1][3],
                             'diameter': self.eg_diameter,
                             'color': self.eg_color,
                             'save': val[1][4]
                             }
-                elif val[0] == 17: # eg-draw-cross
+                elif val[0] == self.DRAW_CROSS:
                     code = {
-                            'code': 'cross',
+                            'code': val[0],
                             'x': (val[1][0] * 256) + val[1][1],
                             'y': (val[1][2] * 256) + val[1][3],
                             'diameter': self.eg_diameter,
                             'color': self.eg_color
                             }
-                elif val[0] == 18: # eg-draw-text
+                elif val[0] == self.DISPLAY_TEXT:
                     code = {
-                            'code': 'text',
+                            'code': val[0],
                             'x': (val[1][0] * 256) + val[1][1],
                             'y': (val[1][2] * 256) + val[1][3],
                             'color': self.eg_color,
                             'text': "".join(map(chr,val[1][4:]))
                             }
-                elif val[0] == 19: # eg-cal-complete
-                    code = {'code': 'complete'}
-                elif val[0] == 20: # eg-cal-aborted
+                elif val[0] == self.CALIBRATION_COMPLETE:
+                    code = {'code': val[0]}
+                elif val[0] == self.CALIBRATION_ABORTED:
                     pygame.event.clear(pygame.USEREVENT)
-                    code = {'code': 'abort'}             
+                    code = {'code': val[0]}             
                 if code and self.do_calibration:
                     pygame.event.post(pygame.event.Event(pygame.USEREVENT, dict(code)))
         
@@ -160,28 +184,27 @@ class EyeGaze(object):
                         ret = False
                         self.do_calibration = False
                 elif event.type == pygame.USEREVENT:
-                    #print event
-                    if event.code == 'clear':
+                    if event.code == self.CLEAR_SCREEN:
                         self.surf.fill(self.bg_color)
-                    elif event.code == 'circle':
+                    elif event.code == self.DRAW_CIRCLE:
                         if event.save == 0:
                             circles[:] = []
                         circles.append((event.color, event.x, event.y, event.diameter, event.save))
-                    elif event.code == 'cross':
+                    elif event.code == self.DRAW_CROSS:
                         pygame.draw.line(self.surf, event.color,
                                          (event.x-event.diameter/2, event.y),
                                          (event.x+event.diameter/2, event.y))
                         pygame.draw.line(self.surf, event.color,
                                          (event.x, event.y-event.diameter/2),
                                          (event.x, event.y+event.diameter/2))
-                    elif event.code == 'text':
+                    elif event.code == self.DISPLAY_TEXT:
                         text = self.eg_font.render(event.text, True, event.color)
                         text_rect = text.get_rect()
                         text_rect.bottomleft = (event.x, event.y)
                         self.surf.blit(text, text_rect)
-                    elif event.code == 'complete':
+                    elif event.code == self.CALIBRATION_COMPLETE:
                         self.do_calibration = False
-                    elif event.code == 'abort':
+                    elif event.code == self.CALIBRATION_ABORTED:
                         ret = False
                         self.do_calibration = False
         if standalone:
