@@ -137,7 +137,7 @@ class EyeGaze(object):
         self.width, self.height = self.screen.get_size()
         self.surf = pygame.Surface((self.width, self.height))
         self.surf_rect = self.surf.get_rect()
-        self.eg_font = pygame.font.Font(None, 18)
+        self.eg_font = pygame.font.Font(pygame.font.match_font('courier'), 18)
         self._send_message(self._format_message(10))
         ret = True
         self.do_calibration = True
