@@ -177,7 +177,7 @@ class EyeGaze(object):
                     elif event.code == 'text':
                         text = self.eg_font.render(event.text, True, event.color)
                         text_rect = text.get_rect()
-                        text_rect.center = (event.x, event.y)
+                        text_rect.bottomleft = (event.x, event.y)
                         self.surf.blit(text, text_rect)
                     elif event.code == 'complete':
                         self.do_calibration = False
