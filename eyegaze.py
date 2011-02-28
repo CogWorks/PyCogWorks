@@ -10,6 +10,7 @@ class EyeGaze(object):
         self.port = port
         self.s = None
         self.do_calibration = False
+        self.bg_color = (51,51,153)
         self.eg_color = (0,0,0)
         self.eg_diameter = 0
         self.eg_font = None
@@ -36,10 +37,15 @@ class EyeGaze(object):
                 if val[0] == 0: # eg-gaze-info
                     pass
                 elif val[0] == 11: # eg-ws-query
-                    body = "%4d,%4d,%4d,%4d,%4d,%4d,%4d,%4d" % (340, 272, self.width, self.height, self.width, self.height, 0, 0)               
+                    body = "%4d,%4d,%4d,%4d,%4d,%4d,%4d,%4d" % (340, 272,
+                                                                self.width,
+                                                                self.height,
+                                                                self.width,
+                                                                self.height,
+                                                                0, 0)               
                     self._send_message(self._format_message(12, body))
                 elif val[0] == 13: # eg-clear-screen
-                    code = {'code': 'clear', 'color': self.eg_color}
+                    code = {'code': 'clear'}
                 elif val[0] == 14: # eg-set-color
                     self.eg_color = (val[1][2],val[1][1],val[1][0])
                 elif val[0] == 15: # eg-set-diameter
@@ -50,7 +56,8 @@ class EyeGaze(object):
                             'x': (val[1][0] * 256) + val[1][1],
                             'y': (val[1][2] * 256) + val[1][3],
                             'diameter': self.eg_diameter,
-                            'color': self.eg_color
+                            'color': self.eg_color,
+                            'save': val[1][4]
                             }
                 elif val[0] == 17: # eg-draw-cross
                     code = {
@@ -118,8 +125,9 @@ class EyeGaze(object):
         self.s.close()
         self.s = None
     
-    def calibrate(self, screen=pygame.display.get_surface()):
+    def calibrate(self, screen=pygame.display.get_surface(), bgcolor=(51,51,153)):
         """Start calibration procedure"""
+        self.bg_color = bgcolor
         standalone = False
         if screen:
             self.screen = screen
@@ -147,18 +155,19 @@ class EyeGaze(object):
                 elif event.type == pygame.USEREVENT:
                     print event
                     if event.code == 'clear':
-                        self.surf.fill(event.color)
+                        self.surf.fill(self.bg_color)
                     elif event.code == 'circle':
-                        pygame.draw.circle(self.surf, event.color, 
-                                           (event.x,event.y),
-                                           event.diameter)
+                        pygame.draw.circle(self.surf, event.color,
+                                           (event.x,event.y), event.diameter)
+                        pygame.draw.circle(self.surf, event.color,
+                                           (event.x,event.y), 1)
                     elif event.code == 'cross':
                         pygame.draw.line(self.surf, event.color,
-                                         ((event.x-event.diameter/2), event.y),
-                                         ((event.x+event.diameter/2), event.y))
+                                         (event.x-event.diameter/2, event.y),
+                                         (event.x+event.diameter/2, event.y))
                         pygame.draw.line(self.surf, event.color,
-                                         (event.x, (event.y-event.diameter/2)),
-                                         (event.x, (event.y+event.diameter/2)))
+                                         (event.x, event.y-event.diameter/2),
+                                         (event.x, event.y+event.diameter/2))
                     elif event.code == 'text':
                         text = self.eg_font.render(event.text, True, event.color)
                         text_rect = text.get_rect()
