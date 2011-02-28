@@ -151,7 +151,7 @@ class EyeGaze(object):
             while i < len(circles):
                 pygame.draw.circle(tmp, circles[i][0],(circles[i][1],circles[i][2]), circles[i][3])
                 pygame.draw.circle(tmp, circles[i][0], (circles[i][1],circles[i][2]), 1)
-                if c[4] == 0:
+                if circles[i][4] == 0:
                     circles.pop(i)
                 else:
                     i += 1 
@@ -163,10 +163,12 @@ class EyeGaze(object):
                         ret = False
                         self.do_calibration = False
                 elif event.type == pygame.USEREVENT:
-                    print event
+                    #print event
                     if event.code == 'clear':
                         self.surf.fill(self.bg_color)
                     elif event.code == 'circle':
+                        if event.save == 0:
+                            circles[:] = []
                         circles.append((event.color, event.x, event.y, event.diameter, event.save))
                     elif event.code == 'cross':
                         pygame.draw.line(self.surf, event.color,
