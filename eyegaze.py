@@ -93,7 +93,7 @@ class EyeGaze(object):
         chksum = 0
         for c in msg:
             chksum += ord(c)
-        return chr((chksum & 0xff)-2)
+        return chr(chksum & 0xff)
     
     def _format_message(self, command, body=""):
         msg_len = 5 + len(body)
@@ -101,19 +101,8 @@ class EyeGaze(object):
         i2, r2 = self._mod(r1, 256)
         header = chr(i1) + chr(i2) + chr(r2) + chr(command)
         msg = header + body
-        msg = msg + self._checksum(msg)
-        l = len(msg)
-        s = 8 - l % 8 + l
-        return string.ljust(msg,s,'\x00')
+        return msg + self._checksum(msg)
     
-    def _make_checksum(self, command, body=""):
-        msg_len = 5 + len(body)
-        i1, r1 = self._mod(msg_len, 65536)
-        i2, r2 = self._mod(r1, 256)
-        header = chr(i1) + chr(i2) + chr(r2) + chr(command)
-        msg = header + body
-        return self._checksum(msg)
-           
     def connect(self):
         """Connect to EGServer"""
         ret = None
