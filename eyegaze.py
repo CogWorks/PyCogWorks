@@ -41,16 +41,19 @@ class EyeGaze(object):
         
     def _read_message(self):
         ret = None
-        header = map(ord,self.s.recv(4))
-        body_len = (header[0] * 65536) + (header[1] * 256) + header[2] - 4
-        body = None
-        accum = sum(header)
-        if body_len > 1:
-            body = map(ord,self.s.recv(body_len - 1))
-            accum += sum(body)
-        chksum = ord(self.s.recv(1))
-        if chksum == (255 & accum):
-            ret = (header[3],body)
+        try:
+            header = map(ord,self.s.recv(4))
+            body_len = (header[0] * 65536) + (header[1] * 256) + header[2] - 4
+            body = None
+            accum = sum(header)
+            if body_len > 1:
+                body = map(ord,self.s.recv(body_len - 1))
+                accum += sum(body)
+            chksum = ord(self.s.recv(1))
+            if chksum == (255 & accum):
+                ret = (header[3],body)
+        except IndexError:
+            pass
         return ret
             
     def _read_loop(self):
@@ -142,6 +145,7 @@ class EyeGaze(object):
     
     def disconnect(self):
         """Disconnect from EGServer"""
+        self.read_messages = False
         self._send_message(self._format_message(32))
         self.s.close()
         self.s = None
@@ -161,7 +165,7 @@ class EyeGaze(object):
         self.width, self.height = self.screen.get_size()
         self.surf = pygame.Surface((self.width, self.height))
         self.surf_rect = self.surf.get_rect()
-        self.eg_font = pygame.font.Font(pygame.font.match_font('courier'), 18)
+        self.eg_font = pygame.font.SysFont('courier', 18, bold=True)
         self._send_message(self._format_message(10))
         ret = True
         self.do_calibration = True
@@ -213,15 +217,12 @@ class EyeGaze(object):
         
     def data_start(self):
         """Start data logging"""
-        self._send_message(self._format_message(30))
+        self._send_message(self._format_message(self.BEGIN_SENDING_DATA))
         
     def data_stop(self):
         """Stop data logging"""
-        self._send_message(self._format_message(31))
+        self._send_message(self._format_message(self.STOP_SENDING_DATA))
         
-    def test_message(self, command, body=""):
-        return self._send_message(command, body)
-    
     def __del__(self):
         if self.s:
             self.disconnect()
