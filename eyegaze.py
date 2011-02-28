@@ -137,10 +137,10 @@ class EyeGaze(object):
             pygame.font.init()
             pygame.mouse.set_visible(False)
             self.screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN|pygame.HWSURFACE|pygame.DOUBLEBUF)
-            self.width, self.height = self.screen.get_size()
-            self.eg_font = pygame.font.Font(None, 24)
-            self.surf = pygame.Surface((self.width, self.height))
-            self.surf_rect = self.surf.get_rect()
+        self.width, self.height = self.screen.get_size()
+        self.surf = pygame.Surface((self.width, self.height))
+        self.surf_rect = self.surf.get_rect()
+        self.eg_font = pygame.font.Font(None, 18)
         self._send_message(self._format_message(10))
         ret = True
         self.do_calibration = True
