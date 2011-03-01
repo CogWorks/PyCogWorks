@@ -78,6 +78,8 @@ class EyeGaze(object):
                                    'x': int("".join(d[0:4])),
                                    'y': int("".join(d[4:8]))}
                         print eg_data
+                    else:
+                        print val[1]
                 elif val[0] == self.WORKSTATION_QUERY:
                     body = "%4d,%4d,%4d,%4d,%4d,%4d,%4d,%4d" % (340, 272,
                                                                 self.width,
