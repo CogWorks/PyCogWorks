@@ -1,6 +1,13 @@
 import socket, math, string, pygame
 from threading import Thread
 
+"""
+from eyegaze import *
+eg = EyeGaze('1.0.0.21',3999)
+eg.connect()
+eg.calibrate()
+"""
+
 class EyeGaze(object):
     """This is a simple package for connecting with LC Technologies EGServer"""
     
@@ -62,7 +69,15 @@ class EyeGaze(object):
             code = None
             if val:
                 if val[0] == self.GAZEINFO:
-                    pass
+                    if len(val[1]) == 24:
+                        d = map(chr,val[1])
+                        eg_data = {'timestamp': int("".join(d[14:24])),
+                                   'camera': int("".join(d[12:14])),
+                                   'status': int("".join(d[11:12])),
+                                   'pupil': int("".join(d[8:11])),
+                                   'x': int("".join(d[0:4])),
+                                   'y': int("".join(d[4:8]))}
+                        print eg_data
                 elif val[0] == self.WORKSTATION_QUERY:
                     body = "%4d,%4d,%4d,%4d,%4d,%4d,%4d,%4d" % (340, 272,
                                                                 self.width,
