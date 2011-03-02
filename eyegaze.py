@@ -47,6 +47,7 @@ class EyeGaze(object):
         self.eg_color = (0,0,0)
         self.eg_diameter = 0
         self.eg_font = None
+        self.eg_data = None
         
     def _read_message(self):
         ret = None
@@ -73,31 +74,29 @@ class EyeGaze(object):
                 if val[0] == self.GAZEINFO:
                     d = "".join(map(chr,val[1]))
                     if len(val[1]) == 24:
-                        eg_data = {'timestamp': int(d[14:24]),
-                                   'camera': int(d[12:14]),
-                                   'status': int(d[11:12]),
-                                   'pupil': int(d[8:11]),
-                                   'x': int(d[0:4]),
-                                   'y': int(d[4:8])}
-                        print eg_data
+                        self.eg_data = {'timestamp': int(d[14:24]),
+                                        'camera': int(d[12:14]),
+                                        'status': int(d[11:12]),
+                                        'pupil': int(d[8:11]),
+                                        'x': int(d[0:4]),
+                                        'y': int(d[4:8])}
                     else:
 			tmp = struct.unpack(self.EgDataStruct, d[1:-5])
-                        eg_data = {'camera': ord(d[0]),
-                                   'status': tmp[0],
-                                   'x': tmp[1],
-                                   'y': tmp[2],
-                                   'pupil': tmp[3],
-                                   'xEyeOffset': tmp[4],
-                                   'yEyeOffset': tmp[5],
-                                   'focusRange': tmp[6],
-                                   'focusRangeOffset': tmp[7],
-                                   'lensExtOffset': tmp[8],
-                                   'fieldcount': tmp[9],
-                                   'gazetime': tmp[10],
-                                   'appmarkTime': tmp[11],
-                                   'appmarkCount': tmp[12],
-                                   'reportTime': tmp[13]}
-                        print eg_data
+                        self.eg_data = {'camera': ord(d[0]),
+                                       'status': tmp[0],
+                                       'x': tmp[1],
+                                       'y': tmp[2],
+                                       'pupil': tmp[3],
+                                       'xEyeOffset': tmp[4],
+                                       'yEyeOffset': tmp[5],
+                                       'focusRange': tmp[6],
+                                       'focusRangeOffset': tmp[7],
+                                       'lensExtOffset': tmp[8],
+                                       'fieldcount': tmp[9],
+                                       'gazetime': tmp[10],
+                                       'appmarkTime': tmp[11],
+                                       'appmarkCount': tmp[12],
+                                       'reportTime': tmp[13]}
                 elif val[0] == self.WORKSTATION_QUERY:
                     body = "%4d,%4d,%4d,%4d,%4d,%4d,%4d,%4d" % (340, 272,
                                                                 self.width,
@@ -257,6 +256,38 @@ class EyeGaze(object):
     def data_stop(self):
         """Stop data logging"""
         self._send_message(self._format_message(self.STOP_SENDING_DATA))
+        
+    def trace_test(self):
+        pygame.display.init()
+        pygame.font.init()
+        pygame.mouse.set_visible(False)
+        self.screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN|pygame.HWSURFACE|pygame.DOUBLEBUF)
+        self.width, self.height = self.screen.get_size()
+        self.surf = pygame.Surface((self.width, self.height))
+        self.surf_rect = self.surf.get_rect()
+        self.clock = pygame.time.Clock()
+        
+        self.data_start()
+        cont = True
+        while cont:
+            tick_time = self.clock.tick(60)
+            self.screen.fill((0,0,0))
+            if self.eg_data:
+                self.surf.fill((0,0,0))
+                pygame.draw.line(self.surf, (255,0,0),
+                                 (self.eg_data.x-10, self.eg_data.y),
+                                 (self.eg_data.x+10, self.eg_data.y))
+                pygame.draw.line(self.surf, (255,0,0),
+                                 (self.eg_data.x, self.eg_data.y-10),
+                                 (self.eg_data.x, self.eg_data.y+10))
+                self.screen.blit(self.surf, self.surf_rect)
+            pygame.display.flip()
+            for event in pygame.event.get():
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_ESCAPE:
+                        cont = False
+        self.data_stop()
+        pygame.display.quit()
         
     def __del__(self):
         if self.s:
