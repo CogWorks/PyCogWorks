@@ -3,7 +3,7 @@ from threading import Thread
 
 """
 from eyegaze import *
-eg = EyeGaze('1.0.0.21',3999)
+eg = EyeGaze('1.0.0.11',3999)
 eg.connect()
 eg.calibrate()
 """
@@ -80,23 +80,23 @@ class EyeGaze(object):
                                         'pupil': int(d[8:11]),
                                         'x': int(d[0:4]),
                                         'y': int(d[4:8])}
-                    else:
-			tmp = struct.unpack(self.EgDataStruct, d[1:-5])
+                    elif len(val[1]) == 78:
+                        tmp = struct.unpack(self.EgDataStruct, d[1:-5])
                         self.eg_data = {'camera': ord(d[0]),
-                                       'status': tmp[0],
-                                       'x': tmp[1],
-                                       'y': tmp[2],
-                                       'pupil': tmp[3],
-                                       'xEyeOffset': tmp[4],
-                                       'yEyeOffset': tmp[5],
-                                       'focusRange': tmp[6],
-                                       'focusRangeOffset': tmp[7],
-                                       'lensExtOffset': tmp[8],
-                                       'fieldcount': tmp[9],
-                                       'gazetime': tmp[10],
-                                       'appmarkTime': tmp[11],
-                                       'appmarkCount': tmp[12],
-                                       'reportTime': tmp[13]}
+                                        'status': tmp[0],
+                                        'x': tmp[1],
+                                        'y': tmp[2],
+                                        'pupil': tmp[3],
+                                        'xEyeOffset': tmp[4],
+                                        'yEyeOffset': tmp[5],
+                                        'focusRange': tmp[6],
+                                        'focusRangeOffset': tmp[7],
+                                        'lensExtOffset': tmp[8],
+                                        'fieldcount': tmp[9],
+                                        'gazetime': tmp[10],
+                                        'appmarkTime': tmp[11],
+                                        'appmarkCount': tmp[12],
+                                        'reportTime': tmp[13]}
                 elif val[0] == self.WORKSTATION_QUERY:
                     body = "%4d,%4d,%4d,%4d,%4d,%4d,%4d,%4d" % (340, 272,
                                                                 self.width,
@@ -282,10 +282,11 @@ class EyeGaze(object):
                                  (self.eg_data.x, self.eg_data.y+10))
                 self.screen.blit(self.surf, self.surf_rect)
             pygame.display.flip()
-            for event in pygame.event.get():
-                if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_ESCAPE:
-                        cont = False
+            if pygame.event.peek():
+                for event in pygame.event.get():
+                    if event.type == pygame.KEYDOWN:
+                        if event.key == pygame.K_ESCAPE:
+                            cont = False
         self.data_stop()
         pygame.display.quit()
         
