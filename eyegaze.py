@@ -35,7 +35,7 @@ class EyeGaze(object):
     BEGIN_SENDING_VERGENCE  = 40
     STOP_SENDING_VERGENCE   = 41
     
-    EgDataStruct            = '3i6fI2did'
+    EgDataStruct            = '<3i6fQ2did'
     
     def __init__(self, host, port):
         super(EyeGaze, self).__init__()
@@ -81,7 +81,7 @@ class EyeGaze(object):
                                    'y': int(d[4:8])}
                         print eg_data
                     else:
-                        tmp = struct.unpack(self.EgDataStruct, d[1:-5])
+			tmp = struct.unpack(self.EgDataStruct, d[1:-5])
                         eg_data = {'camera': ord(d[0]),
                                    'status': tmp[0],
                                    'x': tmp[1],
