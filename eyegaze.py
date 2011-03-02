@@ -1,4 +1,4 @@
-import socket, math, string, pygame
+import socket, math, string, pygame, struct
 from threading import Thread
 
 """
@@ -35,6 +35,8 @@ class EyeGaze(object):
     BEGIN_SENDING_VERGENCE  = 40
     STOP_SENDING_VERGENCE   = 41
     
+    EgDataStruct            = '3i6fI2did'
+    
     def __init__(self, host, port):
         super(EyeGaze, self).__init__()
         self.host = host
@@ -69,17 +71,33 @@ class EyeGaze(object):
             code = None
             if val:
                 if val[0] == self.GAZEINFO:
+                    d = "".join(map(chr,val[1]))
                     if len(val[1]) == 24:
-                        d = map(chr,val[1])
-                        eg_data = {'timestamp': int("".join(d[14:24])),
-                                   'camera': int("".join(d[12:14])),
-                                   'status': int("".join(d[11:12])),
-                                   'pupil': int("".join(d[8:11])),
-                                   'x': int("".join(d[0:4])),
-                                   'y': int("".join(d[4:8]))}
+                        eg_data = {'timestamp': int(d[14:24]),
+                                   'camera': int(d[12:14]),
+                                   'status': int(d[11:12]),
+                                   'pupil': int(d[8:11]),
+                                   'x': int(d[0:4]),
+                                   'y': int(d[4:8])}
                         print eg_data
                     else:
-                        print val[1]
+                        tmp = struct.unpack(self.EgDataStruct, d[1:-5])
+                        eg_data = {'camera': ord(d[0]),
+                                   'status': tmp[0],
+                                   'x': tmp[1],
+                                   'y': tmp[2],
+                                   'pupil': tmp[3],
+                                   'xEyeOffset': tmp[4],
+                                   'yEyeOffset': tmp[5],
+                                   'focusRange': tmp[6],
+                                   'focusRangeOffset': tmp[7],
+                                   'lensExtOffset': tmp[8],
+                                   'fieldcount': tmp[9],
+                                   'gazetime': tmp[10],
+                                   'appmarkTime': tmp[11],
+                                   'appmarkCount': tmp[12],
+                                   'reportTime': tmp[13]}
+                        print eg_data
                 elif val[0] == self.WORKSTATION_QUERY:
                     body = "%4d,%4d,%4d,%4d,%4d,%4d,%4d,%4d" % (340, 272,
                                                                 self.width,
