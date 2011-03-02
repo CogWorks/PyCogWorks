@@ -3,7 +3,7 @@ from threading import Thread
 
 """
 from eyegaze import *
-eg = EyeGaze('1.0.0.21',3999)
+eg = EyeGaze('1.0.0.31',3999)
 eg.connect()
 eg.calibrate()
 """
@@ -204,7 +204,9 @@ class EyeGaze(object):
         ret = True
         self.do_calibration = True
         circles = []
+        self.clock = pygame.time.Clock()
         while self.do_calibration:
+            tick_time = self.clock.tick(30)
             tmp = self.surf.copy()
             i = 0
             while i < len(circles):
