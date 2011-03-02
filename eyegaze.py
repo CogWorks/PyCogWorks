@@ -3,7 +3,7 @@ from threading import Thread
 
 """
 from eyegaze import *
-eg = EyeGaze('1.0.0.11',3999)
+eg = EyeGaze('1.0.0.21',3999)
 eg.connect()
 eg.calibrate()
 """
@@ -275,11 +275,11 @@ class EyeGaze(object):
             if self.eg_data:
                 self.surf.fill((0,0,0))
                 pygame.draw.line(self.surf, (255,0,0),
-                                 (self.eg_data.x-10, self.eg_data.y),
-                                 (self.eg_data.x+10, self.eg_data.y))
+                                 (self.eg_data['x']-10, self.eg_data['y']),
+                                 (self.eg_data['x']+10, self.eg_data['y']))
                 pygame.draw.line(self.surf, (255,0,0),
-                                 (self.eg_data.x, self.eg_data.y-10),
-                                 (self.eg_data.x, self.eg_data.y+10))
+                                 (self.eg_data['x'], self.eg_data['y']-10),
+                                 (self.eg_data['x'], self.eg_data['y']+10))
                 self.screen.blit(self.surf, self.surf_rect)
             pygame.display.flip()
             if pygame.event.peek():
