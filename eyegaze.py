@@ -2,10 +2,13 @@ import socket, math, string, pygame, struct
 from threading import Thread
 
 """
+import pygame
+pygame.display.init()
+pygame.font.init()
 from eyegaze import *
 eg = EyeGaze('1.0.0.31')
 eg.connect()
-eg.calibrate()
+s = pygame.display.set_mode((800,600))
 """
 
 class EyeGaze(object):
@@ -97,12 +100,14 @@ class EyeGaze(object):
                                         'appmarkCount': tmp[12],
                                         'reportTime': tmp[13]}
                 elif val[0] == self.WORKSTATION_QUERY:
-                    body = "%4d,%4d,%4d,%4d,%4d,%4d,%4d,%4d" % (340, 272,
+                    body = "%4d,%4d,%4d,%4d,%4d,%4d,%4d,%4d" % (self.screen_x_dimm, 
+                                                                self.screen_y_dimm,
                                                                 self.width,
                                                                 self.height,
                                                                 self.width,
                                                                 self.height,
-                                                                0, 0)               
+                                                                self.x_offset,
+                                                                self.y_offset)               
                     self._send_message(self._format_message(12, body))
                 elif val[0] == self.CLEAR_SCREEN:
                     code = {'code': val[0]}
@@ -183,9 +188,12 @@ class EyeGaze(object):
         self.s.close()
         self.s = None
     
-    def calibrate(self, screen=pygame.display.get_surface(), bgcolor=(51,51,153)):
+    def calibrate(self, screen=pygame.display.get_surface(), bgcolor=(51,51,153),
+                  screen_x_dimm=340, screen_y_dimm=272):
         """Start calibration procedure"""
         self.bg_color = bgcolor
+        self.screen_x_dimm = screen_x_dimm
+        self.screen_y_dimm = screen_y_dimm
         standalone = False
         if screen:
             self.screen = screen
@@ -198,6 +206,7 @@ class EyeGaze(object):
         self.width, self.height = self.screen.get_size()
         self.surf = pygame.Surface((self.width, self.height))
         self.surf_rect = self.surf.get_rect()
+        self.x_offset, self.y_offset = self.surf_rect.topleft
         self.eg_font = pygame.font.SysFont('courier', 18, bold=True)
         self._send_message(self._format_message(10))
         ret = True
