@@ -3,7 +3,7 @@ from threading import Thread
 
 """
 from eyegaze import *
-eg = EyeGaze('1.0.0.31',3999)
+eg = EyeGaze('1.0.0.31')
 eg.connect()
 eg.calibrate()
 """
@@ -37,10 +37,9 @@ class EyeGaze(object):
     
     EgDataStruct            = '3i6fI2did'
     
-    def __init__(self, host, port):
+    def __init__(self, host):
         super(EyeGaze, self).__init__()
         self.host = host
-        self.port = port
         self.s = None
         self.do_calibration = False
         self.bg_color = (51,51,153)
@@ -169,7 +168,7 @@ class EyeGaze(object):
         ret = None
         try:
             self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.s.connect((self.host, self.port))
+            self.s.connect((self.host, 3999))
             self.read_messages = True
             self.thread = Thread(target=self._read_loop)
             self.thread.start()
