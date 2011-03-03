@@ -228,9 +228,10 @@ class EyeGaze(object):
             pygame.display.flip()
             for event in pygame.event.get():
                 if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_ESCAPE:
+                    if event.key == pygame.K_F2:
                         ret = False
                         self.do_calibration = False
+                        self.calibrate_abort()
                 elif event.type == pygame.USEREVENT:
                     if event.code == self.CLEAR_SCREEN:
                         self.surf.fill(self.bg_color)
@@ -258,6 +259,10 @@ class EyeGaze(object):
         if standalone:
             pygame.display.quit()   
         return ret
+    
+    def calibrate_abort(self):
+        """Abort calibration"""
+        self._send_message(self._format_message(self.CALIBRATE_ABORT))
         
     def data_start(self):
         """Start data logging"""
