@@ -25,25 +25,25 @@ class CogWorld(object):
         return json.loads(self.t.read_until('\n'))['result']
     
     def cwGetVersion(self):
-        cmd = {'method':'cwGetVersion','id':self.id}
+        cmd = {'method':'cwGetVersion', 'id':self.id}
         return self._sendCommand(json.dumps(cmd))
     
     def cwEegBeginRecord(self):
-        cmd = {'method':'cwEegBeginRecord','id':self.id}
+        cmd = {'method':'cwEegBeginRecord', 'id':self.id}
         return self._sendCommand(json.dumps(cmd))
     
     def cwEegEndRecord(self):
-        cmd = {'method':'cwEegEndRecord','id':self.id}
+        cmd = {'method':'cwEegEndRecord', 'id':self.id}
         return self._sendCommand(json.dumps(cmd))
     
     def cwEegEventNotify(self, duration, type_code, label, data):
-        cmd = {'method':'cwEegEventNotify','params':[duration,type_code,label,data],'id':self.id}
+        cmd = {'method':'cwEegEventNotify', 'params':[duration, type_code, label, data], 'id':self.id}
         return self._sendCommand(json.dumps(cmd))
     
     def cwLogInfo(self, list):
-        cmd = {'method':'cwLogInfo','params':[list],'id':self.id}
+        cmd = {'method':'cwLogInfo', 'params':[list], 'id':self.id}
         return self._sendCommand(json.dumps(cmd))
     
     def cwGetEyetrackerIp(self):
-        cmd = {'method':'cwGetEyetrackerIp','id':self.id}
+        cmd = {'method':'cwGetEyetrackerIp', 'id':self.id}
         return self._sendCommand(json.dumps(cmd))
