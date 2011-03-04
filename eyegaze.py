@@ -2,10 +2,13 @@ import socket, math, string, pygame, struct
 from threading import Thread
 
 """
+import pygame
+pygame.display.init()
+pygame.font.init()
 from eyegaze import *
-eg = EyeGaze('1.0.0.21',3999)
+eg = EyeGaze('1.0.0.31')
 eg.connect()
-eg.calibrate()
+s = pygame.display.set_mode((800,600))
 """
 
 class EyeGaze(object):
@@ -35,12 +38,11 @@ class EyeGaze(object):
     BEGIN_SENDING_VERGENCE  = 40
     STOP_SENDING_VERGENCE   = 41
     
-    EgDataStruct            = '<3i6fQ2did'
+    EgDataStruct            = '3i6fI2did'
     
-    def __init__(self, host, port):
+    def __init__(self, host):
         super(EyeGaze, self).__init__()
         self.host = host
-        self.port = port
         self.s = None
         self.do_calibration = False
         self.bg_color = (51,51,153)
@@ -80,30 +82,32 @@ class EyeGaze(object):
                                         'pupil': int(d[8:11]),
                                         'x': int(d[0:4]),
                                         'y': int(d[4:8])}
-                    else:
-			tmp = struct.unpack(self.EgDataStruct, d[1:-5])
+                    elif len(val[1]) == 78:
+                        tmp = struct.unpack(self.EgDataStruct, d[1:-5])
                         self.eg_data = {'camera': ord(d[0]),
-                                       'status': tmp[0],
-                                       'x': tmp[1],
-                                       'y': tmp[2],
-                                       'pupil': tmp[3],
-                                       'xEyeOffset': tmp[4],
-                                       'yEyeOffset': tmp[5],
-                                       'focusRange': tmp[6],
-                                       'focusRangeOffset': tmp[7],
-                                       'lensExtOffset': tmp[8],
-                                       'fieldcount': tmp[9],
-                                       'gazetime': tmp[10],
-                                       'appmarkTime': tmp[11],
-                                       'appmarkCount': tmp[12],
-                                       'reportTime': tmp[13]}
+                                        'status': tmp[0],
+                                        'x': tmp[1],
+                                        'y': tmp[2],
+                                        'pupil': tmp[3],
+                                        'xEyeOffset': tmp[4],
+                                        'yEyeOffset': tmp[5],
+                                        'focusRange': tmp[6],
+                                        'focusRangeOffset': tmp[7],
+                                        'lensExtOffset': tmp[8],
+                                        'fieldcount': tmp[9],
+                                        'gazetime': tmp[10],
+                                        'appmarkTime': tmp[11],
+                                        'appmarkCount': tmp[12],
+                                        'reportTime': tmp[13]}
                 elif val[0] == self.WORKSTATION_QUERY:
-                    body = "%4d,%4d,%4d,%4d,%4d,%4d,%4d,%4d" % (340, 272,
+                    body = "%4d,%4d,%4d,%4d,%4d,%4d,%4d,%4d" % (self.screen_x_dimm, 
+                                                                self.screen_y_dimm,
                                                                 self.width,
                                                                 self.height,
                                                                 self.width,
                                                                 self.height,
-                                                                0, 0)               
+                                                                self.x_offset,
+                                                                self.y_offset)               
                     self._send_message(self._format_message(12, body))
                 elif val[0] == self.CLEAR_SCREEN:
                     code = {'code': val[0]}
@@ -169,7 +173,7 @@ class EyeGaze(object):
         ret = None
         try:
             self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.s.connect((self.host, self.port))
+            self.s.connect((self.host, 3999))
             self.read_messages = True
             self.thread = Thread(target=self._read_loop)
             self.thread.start()
@@ -184,9 +188,12 @@ class EyeGaze(object):
         self.s.close()
         self.s = None
     
-    def calibrate(self, screen=pygame.display.get_surface(), bgcolor=(51,51,153)):
+    def calibrate(self, screen=pygame.display.get_surface(), bgcolor=(51,51,153),
+                  screen_x_dimm=340, screen_y_dimm=272):
         """Start calibration procedure"""
         self.bg_color = bgcolor
+        self.screen_x_dimm = screen_x_dimm
+        self.screen_y_dimm = screen_y_dimm
         standalone = False
         if screen:
             self.screen = screen
@@ -199,12 +206,15 @@ class EyeGaze(object):
         self.width, self.height = self.screen.get_size()
         self.surf = pygame.Surface((self.width, self.height))
         self.surf_rect = self.surf.get_rect()
+        self.x_offset, self.y_offset = self.surf_rect.topleft
         self.eg_font = pygame.font.SysFont('courier', 18, bold=True)
         self._send_message(self._format_message(10))
         ret = True
         self.do_calibration = True
         circles = []
+        self.clock = pygame.time.Clock()
         while self.do_calibration:
+            tick_time = self.clock.tick(30)
             tmp = self.surf.copy()
             i = 0
             while i < len(circles):
@@ -218,9 +228,10 @@ class EyeGaze(object):
             pygame.display.flip()
             for event in pygame.event.get():
                 if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_ESCAPE:
+                    if event.key == pygame.K_F2:
                         ret = False
                         self.do_calibration = False
+                        self.calibrate_abort()
                 elif event.type == pygame.USEREVENT:
                     if event.code == self.CLEAR_SCREEN:
                         self.surf.fill(self.bg_color)
@@ -248,6 +259,10 @@ class EyeGaze(object):
         if standalone:
             pygame.display.quit()   
         return ret
+    
+    def calibrate_abort(self):
+        """Abort calibration"""
+        self._send_message(self._format_message(self.CALIBRATE_ABORT))
         
     def data_start(self):
         """Start data logging"""
@@ -275,17 +290,18 @@ class EyeGaze(object):
             if self.eg_data:
                 self.surf.fill((0,0,0))
                 pygame.draw.line(self.surf, (255,0,0),
-                                 (self.eg_data.x-10, self.eg_data.y),
-                                 (self.eg_data.x+10, self.eg_data.y))
+                                 (self.eg_data['x']-10, self.eg_data['y']),
+                                 (self.eg_data['x']+10, self.eg_data['y']))
                 pygame.draw.line(self.surf, (255,0,0),
-                                 (self.eg_data.x, self.eg_data.y-10),
-                                 (self.eg_data.x, self.eg_data.y+10))
+                                 (self.eg_data['x'], self.eg_data['y']-10),
+                                 (self.eg_data['x'], self.eg_data['y']+10))
                 self.screen.blit(self.surf, self.surf_rect)
             pygame.display.flip()
-            for event in pygame.event.get():
-                if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_ESCAPE:
-                        cont = False
+            if pygame.event.peek():
+                for event in pygame.event.get():
+                    if event.type == pygame.KEYDOWN:
+                        if event.key == pygame.K_ESCAPE:
+                            cont = False
         self.data_stop()
         pygame.display.quit()
         
