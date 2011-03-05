@@ -39,7 +39,7 @@ class EyeGaze(object):
     BEGIN_SENDING_VERGENCE = 40
     STOP_SENDING_VERGENCE = 41
     
-    EgDataStruct = '3i6fI2did'
+    EgDataStruct = '<3i6fQ2did'
     
     def __init__(self, host):
         super(EyeGaze, self).__init__()
