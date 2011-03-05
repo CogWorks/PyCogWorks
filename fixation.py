@@ -1,46 +1,55 @@
 from __future__ import division
-import math, json, pickle, sys
+import math, json, copy
+import pickle
 
 class FixationData(object):
-    iStartCount = 0
-    iEndCount = 0
-    iNSamples = 0
-    fXSum = 0.0
-    fYSum = 0.0
+    """NEW,PRES,PREV FIXATION DATA"""
+    
+    start_count = 0
+    end_count = 0
+    n_samples = 0
+    sum_x = 0.0
+    sum_y = 0.0
     fX = 0.0
     fY = 0.0
     
     def __str__(self):
-        return json.dumps({'iStartCount': self.iStartCount,
-                           'iEndCount': self.iEndCount,
-                           'iNSamples': self.iNSamples,
-                           'fXSum': self.fXSum,
-                           'fYSum': self.fYSum,
+        return json.dumps({'start_count': self.start_count,
+                           'end_count': self.end_count,
+                           'n_samples': self.n_samples,
+                           'sum_x': self.sum_x,
+                           'sum_y': self.sum_y,
                            'fX': self.fX,
                            'fY': self.fY})
     
 class GazeData(object):
-    fXGaze = 0.0
-    fYGaze = 0.0
-    bGazeFound = 0
-    iEyeMotionState = 0
-    fXFix = 0.0
-    fYFix = 0.0
-    fGazeDeviation = -0.1
-    iSacDuration = 0
-    iFixDuration = 0
+    """RING BUFFER DATA"""
+    
+    gaze_x = 0.0
+    gaze_y = 0.0
+    gaze_found = 0
+    eye_motion_state = 0
+    fix_x = -0.0
+    fix_y = -0.0
+    gaze_deviation = -0.1
+    sac_duration = 0
+    fix_duration = 0
     
     def __str__(self):
-        return json.dumps({'Gaze': [self.fXGaze, self.fYGaze],
-                           'bGazeFound': self.bGazeFound,
-                           'iEyeMotionState': self.iEyeMotionState,
-                           'Fix': [self.fXFix, self.fYFix],
-                           'fGazeDeviation': self.fGazeDeviation,
-                           'iSacDuration': self.iSacDuration,
-                           'iFixDuration': self.iFixDuration})
+        return json.dumps({'gaze': [int(math.ceil(self.gaze_x)),
+                                    int(math.ceil(self.gaze_y))],
+                           'gaze_found': self.gaze_found,
+                           'eye_motion_state': self.eye_motion_state,
+                           'fix': [int(math.ceil(self.fix_x)),
+                                   int(math.ceil(self.fix_y))],
+                           'gaze_deviation': \
+                                int(math.ceil(self.gaze_deviation)),
+                           'sac_duration': self.sac_duration,
+                           'fix_duration': self.fix_duration})
         
 
 class FixationProcessor(object):
+    """Eye Fixation Analysis Functions"""
     
     MOVING = 0
     FIXATING = 1
@@ -52,310 +61,266 @@ class FixationProcessor(object):
     
     RING_SIZE = 121
     
-    def __init__(self, fHorzPixPerMm, fMinFixMs=100, fGazeDeviationThreshMm=6.35,
-                 iSamplePerSec=120, verbose=False):
+    def __init__(self, px_per_mm, sample_rate=120, min_fixation_ms=100,
+                 gaze_deviation_thresh_mm=6.35):
         super(FixationProcessor, self).__init__()
         
-        self.verbose = verbose
-        
-        self.iMinimumFixSamples = int(fMinFixMs * iSamplePerSec / 1000.0)
-        if self.iMinimumFixSamples < 3: self.iMinimumFixSamples = 3
+        self.min_fix_samples = int(min_fixation_ms * sample_rate / 1000.0)
+        if self.min_fix_samples < 3:
+            self.min_fix_samples = 3
     
-        self.fGazeDeviationThreshPix = fGazeDeviationThreshMm * fHorzPixPerMm
+        self.gaze_deviation_thresh_px = gaze_deviation_thresh_mm * px_per_mm
         
-        self.iMaxMissedSamples = 3
-        self.iMaxOutSamples = 1
+        self.max_missed_samples = 3
+        self.max_out_samples = 1
     
-        self.stRingBuf = [GazeData() for i in range(0, self.RING_SIZE)]
-        self.iRingIndex = 0
+        self.ring_buffer = [GazeData() for _ in range(0, self.RING_SIZE)]
+        self.ring_index = 0
     
-        self.iCallCount = 0
-        self.stFix = [FixationData() for i in range(0, 3)]
+        self.call_count = 0
+        self.fixations = [FixationData() for _ in range(0, 3)]
         
-        self.iNSamplesSinceLastGoodFixPoint = 0
-        self.iNPresOut = 0
-        self.fPresDr = 0
-        self.fNewDr = 0
+        self.samples_since_last_good = 0
+        self.out_samples = 0
+        self.pres_dv = 0
+        self.new_dv = 0
         
-        '''Debug Shit'''
-        self.devCalcs = 0
-        self.resets = 0
-        self.startfixes = 0
-        self.updates = 0
-        self.checks = 0
-        self.moves = 0
-        self.completes = 0
-        self.restores = 0
+        self.reset_fix(self.PRES_FIX)
+        self.reset_fix(self.NEW_FIX)
         
-        self.ResetFixation(self.PRES_FIX)
+    def calc_deviation(self, fix_type, gaze_x, gaze_y):
+        """This function calculates the deviation of the gazepoint from the
+        argument fix_type fixation location."""
+               
+        fdx = gaze_x - self.fixations[fix_type].fX
+        fdy = gaze_y - self.fixations[fix_type].fY
         
-        self.ResetFixation(self.NEW_FIX)
+        dvsq = fdx * fdx + fdy * fdy
         
-        self.resets = 0
-        self.startfixes = 0
-
-        if self.verbose:
-            print '--> Minimum Fixation Samples: %d <--' % (self.iMinimumFixSamples)
-            print '--> Gaze Deviation Threshold: %f px <--' % (self.fGazeDeviationThreshPix)
-
-        
-    def CalcGazeDeviationFromFix(self, iNewPresPrev, fXGaze, fYGaze):
-        
-        self.devCalcs += 1
-        
-        fDx = fXGaze - self.stFix[iNewPresPrev].fX
-        fDy = fYGaze - self.stFix[iNewPresPrev].fY
-        
-        dDrSq = fDx * fDx + fDy * fDy
-        
-        assert (dDrSq >= 0.0), "SHIT 4"
-        if dDrSq < 0.0: dDrSq = 0.0
-        fDr = math.sqrt(dDrSq)
+        assert (dvsq >= 0.0)
+        if dvsq < 0.0:
+            dvsq = 0.0
+        fdv = math.sqrt(dvsq)
             
-        if iNewPresPrev == self.PRES_FIX:
-            assert (self.iRingIndex >= 0 and self.iRingIndex < self.RING_SIZE), "SHIT 5"
-            self.stRingBuf[self.iRingIndex].fGazeDeviation = fDr
+        if fix_type == self.PRES_FIX:
+            assert (self.ring_index >= 0 and self.ring_index < self.RING_SIZE)
+            self.ring_buffer[self.ring_index].gaze_deviation = fdv
             
-        print '@@ %f' % (fDr) 
+        return fdv
+        
+    def reset_fix(self, fix_type):
+        """This function resets the argument fix_type fixation, 
+        i.e. declares it nonexistent."""
+        
+        self.fixations[fix_type].start_count = 0
+        self.fixations[fix_type].end_count = 0
+        self.fixations[fix_type].n_samples = 0
+        self.fixations[fix_type].sum_x = 0.0
+        self.fixations[fix_type].sum_y = 0.0
+        self.fixations[fix_type].fX = 0.0
+        self.fixations[fix_type].fY = 0.0
+        
+        if fix_type == self.PRES_FIX:
+            self.out_samples = 0
             
-        return fDr
+    def start_fix(self, fix_type, gaze_x, gaze_y):
+        """This function starts the argument fix_type fixation at the argument 
+        gazepoint and makes sure there is no new fixation hypothesis."""
         
-    def ResetFixation(self, iNewPresPrev):
-        
-        self.resets += 1
-        
-        self.stFix[iNewPresPrev].iStartCount = 0
-        self.stFix[iNewPresPrev].iEndCount = 0
-        self.stFix[iNewPresPrev].iNSamples = 0
-        self.stFix[iNewPresPrev].fXSum = 0.0
-        self.stFix[iNewPresPrev].fYSum = 0.0
-        self.stFix[iNewPresPrev].fX = 0.0
-        self.stFix[iNewPresPrev].fY = 0.0
-        
-        if iNewPresPrev == self.PRES_FIX:
-            self.iNPresOut = 0
-            
-    def StartFixAtGazepoint(self, iNewPresPrev, fXGaze, fYGaze):
-        
-        self.startfixes += 1
-        
-        self.stFix[iNewPresPrev].iNSamples = 1
-        self.stFix[iNewPresPrev].fXSum = fXGaze
-        self.stFix[iNewPresPrev].fYSum = fYGaze
-        self.stFix[iNewPresPrev].fX = fXGaze
-        self.stFix[iNewPresPrev].fY = fYGaze
-        self.stFix[iNewPresPrev].iStartCount = self.iCallCount
-        self.stFix[iNewPresPrev].iEndCount = self.iCallCount
+        self.fixations[fix_type].n_samples = 1
+        self.fixations[fix_type].sum_x = gaze_x
+        self.fixations[fix_type].sum_y = gaze_y
+        self.fixations[fix_type].fX = gaze_x
+        self.fixations[fix_type].fY = gaze_y
+        self.fixations[fix_type].start_count = self.call_count
+        self.fixations[fix_type].end_count = self.call_count
     
-        if iNewPresPrev == self.PRES_FIX:
-            self.iNPresOut = 0
-            self.ResetFixation(self.NEW_FIX)
-
-    def UpdateFixation(self, iNewPresPrev, fXGaze, fYGaze):
-        
-        self.updates += 1
-        
-        self.stFix[iNewPresPrev].iNSamples += 1
-        self.stFix[iNewPresPrev].fXSum += fXGaze
-        self.stFix[iNewPresPrev].fYSum += fYGaze
-        self.stFix[iNewPresPrev].fX = self.stFix[iNewPresPrev].fXSum / self.stFix[iNewPresPrev].iNSamples
-        self.stFix[iNewPresPrev].fY = self.stFix[iNewPresPrev].fYSum / self.stFix[iNewPresPrev].iNSamples
-        self.stFix[iNewPresPrev].iEndCount = self.iCallCount
-        
-        if iNewPresPrev == self.PRES_FIX:
-            self.iNPresOut = 0
-            self.CheckIfFixating()
-            self.ResetFixation(self.NEW_FIX)
+        if fix_type == self.PRES_FIX:
+            self.out_samples = 0
+            self.reset_fix(self.NEW_FIX)
             
-    def CheckIfFixating(self):
+    def check_if_fixating(self):
+        """This function checks to see whether there are enough samples in the
+        PRESENT fixation to declare that the eye is fixating yet, and if there
+        is a true fixation going on, it updates the ring buffers to reflect
+        the fixation."""
         
-        self.checks += 1
-        
-        if self.stFix[self.PRES_FIX].iNSamples >= self.iMinimumFixSamples:
-            for i in range(0, self.iMinimumFixSamples):
-                ii = self.iRingIndex - i
-                if ii < 0: ii += self.RING_SIZE
+        if self.fixations[self.PRES_FIX].n_samples >= self.min_fix_samples:
+            for i in range(0, self.min_fix_samples):
+                j = self.ring_index - i
+                if j < 0:
+                    j += self.RING_SIZE
                 
-                assert(ii >= 0 and ii < self.RING_SIZE), "SHIT 6"
+                assert(j >= 0 and j < self.RING_SIZE)
                 
-                self.stRingBuf[ii].iEyeMotionState = self.FIXATING
-                self.stRingBuf[ii].fXFix = self.stFix[self.PRES_FIX].fX
-                self.stRingBuf[ii].fYFix = self.stFix[self.PRES_FIX].fY
+                self.ring_buffer[j].eye_motion_state = self.FIXATING
+                self.ring_buffer[j].fix_x = self.fixations[self.PRES_FIX].fX
+                self.ring_buffer[j].fix_y = self.fixations[self.PRES_FIX].fY
                 
-                self.stRingBuf[ii].iSacDuration = self.stFix[self.PRES_FIX].iStartCount - self.stFix[self.PREV_FIX].iEndCount - 1
-                self.stRingBuf[ii].iFixDuration = self.stFix[self.PRES_FIX].iEndCount - i - self.stFix[self.PRES_FIX].iStartCount + 1
+                self.ring_buffer[j].sac_duration = \
+                    self.fixations[self.PRES_FIX].start_count - \
+                    self.fixations[self.PREV_FIX].end_count - 1
+                self.ring_buffer[j].fix_duration = \
+                    self.fixations[self.PRES_FIX].end_count - \
+                    i - self.fixations[self.PRES_FIX].start_count + 1
 
-    def MoveNewFixToPresFix(self):
+    def update_fix(self, fix_type, gaze_x, gaze_y):
+        """This function updates the argument fix_type fixation with the 
+        argument gazepoint, checks if there are enough samples to declare that 
+        the eye is now fixating, and makes sure there is no hypothesis for a 
+        new fixation."""
         
-        self.moves += 1
+        self.fixations[fix_type].n_samples += 1
+        self.fixations[fix_type].sum_x += gaze_x
+        self.fixations[fix_type].sum_y += gaze_y
+        self.fixations[fix_type].fX = self.fixations[fix_type].sum_x / \
+            self.fixations[fix_type].n_samples
+        self.fixations[fix_type].fY = self.fixations[fix_type].sum_y / \
+            self.fixations[fix_type].n_samples
+        self.fixations[fix_type].end_count = self.call_count
         
-        self.iNPresOut = 0
+        if fix_type == self.PRES_FIX:
+            self.out_samples = 0
+            self.check_if_fixating()
+            self.reset_fix(self.NEW_FIX)
+
+    def move_new_to_pres(self):
+        """This function copies the new fixation data into the present 
+        fixation, and resets the new fixation."""        
         
-        self.stFix[self.PRES_FIX] = self.stFix[self.NEW_FIX]
+        self.out_samples = 0
         
-        self.ResetFixation(self.NEW_FIX)
+        self.fixations[self.PRES_FIX] = copy.copy(self.fixations[self.NEW_FIX])
         
-        self.CheckIfFixating()
+        self.reset_fix(self.NEW_FIX)
         
-    def DeclareCompletedFixation(self, iSamplesAgo):
+        self.check_if_fixating()
         
-        self.completes += 1
+    def declare_completed(self):
+        """This function:
+        a) declares the present fixation to be completed,
+        b) moves the present fixation to the prior fixation, and
+        c) moves the new fixation, if any, to the present fixation."""
         
-        iRingIndexFixCompleted = self.iRingIndex - iSamplesAgo
-        if iRingIndexFixCompleted < 0: iRingIndexFixCompleted += self.RING_SIZE
+        ring_index_completed = self.ring_index - \
+            self.samples_since_last_good
+        if ring_index_completed < 0:
+            ring_index_completed += self.RING_SIZE
         
-        self.stRingBuf[iRingIndexFixCompleted].iEyeMotionState = self.FIXATION_COMPLETED
+        self.ring_buffer[ring_index_completed].eye_motion_state = \
+            self.FIXATION_COMPLETED
+
+        self.fixations[self.PREV_FIX] = copy.copy(self.fixations[self.PRES_FIX])
+
+        self.move_new_to_pres()
         
-        self.stFix[self.PREV_FIX] = self.stFix[self.PRES_FIX]
+    def restore_out_points(self):
+        """This function restores any previous gazepoints that were left out of 
+        the fixation and are now known to be part of the present fixation."""
         
-        print "MOVE-1"
-        self.MoveNewFixToPresFix()
-        
-    def RestoreOutPoints(self):
-        
-        print "RESTORE?"
-        
-        self.restores += 1
-        
-        if self.iNSamplesSinceLastGoodFixPoint > 1:
+        if self.samples_since_last_good > 1:
             
-            for i in range(1, self.iNSamplesSinceLastGoodFixPoint):
-                ii = self.iRingIndex - i
-                if ii < 0: ii += self.RING_SIZE
+            for i in range(1, self.samples_since_last_good):
+                j = self.ring_index - i
+                if j < 0:
+                    j += self.RING_SIZE
                 
-                assert (ii >= 0 and ii < self.RING_SIZE), "SHIT 7"
+                assert (j >= 0 and j < self.RING_SIZE)
                 
-                if self.stRingBuf[ii].bGazeFound:
-                    self.stFix[self.PRES_FIX].iNSamples += 1
-                    self.stFix[self.PRES_FIX].fXSum += self.stRingBuf[ii].fXGaze
-                    self.stFix[self.PRES_FIX].fYSum += self.stRingBuf[ii].fYGaze
-                    self.stRingBuf[ii].iEyeMotionState = self.FIXATING
+                if self.ring_buffer[j].gaze_found:
+                    self.fixations[self.PRES_FIX].n_samples += 1
+                    self.fixations[self.PRES_FIX].sum_x += \
+                        self.ring_buffer[j].gaze_x
+                    self.fixations[self.PRES_FIX].sum_y += \
+                        self.ring_buffer[j].gaze_y
+                    self.ring_buffer[j].eye_motion_state = self.FIXATING
                     
-            self.iNPresOut = 0
+            self.out_samples = 0
             
-    def DetectFixation(self, bGazepointFound, fXGaze, fYGaze):
-                
-        self.iCallCount += 1
-        self.iRingIndex += 1
-        if self.iRingIndex >= self.RING_SIZE: self.iRingIndex = 0
+    def detect_fixation(self, gaze_found, gaze_x, gaze_y):
+        """This function converts a series of uniformly-sampled (raw) gaze 
+        points into a series of variable-duration saccades and fixations."""
+
+        self.call_count += 1
+        self.ring_index += 1
+        if self.ring_index >= self.RING_SIZE:
+            self.ring_index = 0
         
-        assert (self.iRingIndex >= 0 and self.iRingIndex < self.RING_SIZE), "SHIT 1"
+        assert (self.ring_index >= 0 and self.ring_index < self.RING_SIZE)
         
-        self.stRingBuf[self.iRingIndex].fXGaze = fXGaze
-        self.stRingBuf[self.iRingIndex].fYGaze = fYGaze
-        self.stRingBuf[self.iRingIndex].bGazeFound = bGazepointFound
+        self.ring_buffer[self.ring_index].gaze_x = gaze_x
+        self.ring_buffer[self.ring_index].gaze_y = gaze_y
+        self.ring_buffer[self.ring_index].gaze_found = gaze_found
         
-        self.stRingBuf[self.iRingIndex].iEyeMotionState = self.MOVING
-        self.stRingBuf[self.iRingIndex].fXFix = -0.0
-        self.stRingBuf[self.iRingIndex].fYFix = -0.0
-        self.stRingBuf[self.iRingIndex].fGazeDeviation = -0.1
-        self.stRingBuf[self.iRingIndex].iSacDuration = 0
-        self.stRingBuf[self.iRingIndex].iFixDuration = 0
+        self.ring_buffer[self.ring_index].eye_motion_state = self.MOVING
+        self.ring_buffer[self.ring_index].fix_x = -0.0
+        self.ring_buffer[self.ring_index].fix_y = -0.0
+        self.ring_buffer[self.ring_index].gaze_deviation = -0.1
+        self.ring_buffer[self.ring_index].sac_duration = 0
+        self.ring_buffer[self.ring_index].fix_duration = 0
         
-        if self.stFix[self.PRES_FIX].iEndCount > 0:
-            self.iNSamplesSinceLastGoodFixPoint = self.iCallCount - self.stFix[self.PRES_FIX].iEndCount
+        if self.fixations[self.PRES_FIX].end_count > 0:
+            self.samples_since_last_good = self.call_count - \
+                self.fixations[self.PRES_FIX].end_count
         else:
-            self.iNSamplesSinceLastGoodFixPoint = 1
+            self.samples_since_last_good = 1
         
-        print self.stFix[self.PRES_FIX].iNSamples
-        
-        #A1    
-        if bGazepointFound:
-            #B1
-            if self.stFix[self.PRES_FIX].iNSamples > 0:
-                self.fPresDr = self.CalcGazeDeviationFromFix(self.PRES_FIX, fXGaze, fYGaze)
-                #C1
-                if self.fPresDr <= self.fGazeDeviationThreshPix:
-                    self.RestoreOutPoints()
-                    self.UpdateFixation(self.PRES_FIX, fXGaze, fYGaze)
-                #C2
+        if gaze_found:
+            if self.fixations[self.PRES_FIX].n_samples > 0:
+                self.pres_dv = self.calc_deviation(self.PRES_FIX,
+                                                   gaze_x, gaze_y)
+                if self.pres_dv <= self.gaze_deviation_thresh_px:
+                    self.restore_out_points()
+                    self.update_fix(self.PRES_FIX, gaze_x, gaze_y)
                 else:
-                    print "outside"
-                    self.iNPresOut += 1
-                    #D1
-                    if self.iNPresOut <= self.iMaxOutSamples:
-                        #E1
-                        if self.stFix[self.NEW_FIX].iNSamples > 0:
-                            self.fNewDr = self.CalcGazeDeviationFromFix(self.NEW_FIX, fXGaze, fYGaze)
-                            #F1
-                            if self.fNewDr <= self.fGazeDeviationThreshPix:
-                                self.UpdateFixation(self.NEW_FIX, fXGaze, fYGaze)
-                            #F2
+                    self.out_samples += 1
+                    if self.out_samples <= self.max_out_samples:
+                        if self.fixations[self.NEW_FIX].n_samples > 0:
+                            self.new_dv = self.calc_deviation(self.NEW_FIX,
+                                                              gaze_x, gaze_y)
+                            if self.new_dv <= self.gaze_deviation_thresh_px:
+                                self.update_fix(self.NEW_FIX, gaze_x, gaze_y)
                             else:
-                                print "START-1!!!!!!"
-                                self.StartFixAtGazepoint(self.NEW_FIX, fXGaze, fYGaze)
-                        #E2
+                                self.start_fix(self.NEW_FIX, gaze_x, gaze_y)
                         else:
-                            print "START-2!!!!!!"
-                            self.StartFixAtGazepoint(self.NEW_FIX, fXGaze, fYGaze)
-                    #D2
+                            self.start_fix(self.NEW_FIX, gaze_x, gaze_y)
                     else:    
-                        #G1
-                        if self.stFix[self.PRES_FIX].iNSamples >= self.iMinimumFixSamples:
-                            self.DeclareCompletedFixation(self.iNSamplesSinceLastGoodFixPoint)
-                        #G2
+                        if self.fixations[self.PRES_FIX].n_samples >= \
+                            self.min_fix_samples:
+                            self.declare_completed()
                         else:
-                            print "MOVE-2"
-                            self.MoveNewFixToPresFix()
-                        #H1
-                        if self.stFix[self.PRES_FIX].iNSamples > 0:
-                            self.fPresDr = self.CalcGazeDeviationFromFix(self.PRES_FIX, fXGaze, fYGaze)
-                            if self.fPresDr <= self.fGazeDeviationThreshPix:
-                                self.UpdateFixation(self.PRES_FIX, fXGaze, fYGaze)
+                            self.move_new_to_pres()
+                        if self.fixations[self.PRES_FIX].n_samples > 0:
+                            self.pres_dv = self.calc_deviation(self.PRES_FIX,
+                                                               gaze_x, gaze_y)
+                            if self.pres_dv <= self.gaze_deviation_thresh_px:
+                                self.update_fix(self.PRES_FIX, gaze_x, gaze_y)
                             else:
-                                print 'START-3'
-                                self.StartFixAtGazepoint(self.NEW_FIX, fXGaze, fYGaze)
-                        #H2
+                                self.start_fix(self.NEW_FIX, gaze_x, gaze_y)
                         else:
-                            print "START-4"
-                            self.StartFixAtGazepoint(self.PRES_FIX, fXGaze, fYGaze)
-            #B2
+                            self.start_fix(self.PRES_FIX, gaze_x, gaze_y)
             else:
-                self.StartFixAtGazepoint(self.PRES_FIX, fXGaze, fYGaze)
-        #A2
+                self.start_fix(self.PRES_FIX, gaze_x, gaze_y)
         else:
-            #I1
-            if self.iNSamplesSinceLastGoodFixPoint <= self.iMaxMissedSamples:
+            if self.samples_since_last_good <= self.max_missed_samples:
                 pass
-            #I2
             else:
-                #J1
-                if self.stFix[self.PRES_FIX].iNSamples >= self.iMinimumFixSamples:
-                    self.DeclareCompletedFixation(self.iNSamplesSinceLastGoodFixPoint)
-                #J2
+                if self.fixations[self.PRES_FIX].n_samples >= \
+                    self.min_fix_samples:
+                    self.declare_completed()
                 else:
-                    print "MOVE-3"
-                    self.MoveNewFixToPresFix()
+                    self.move_new_to_pres()
                                         
-        return self.stRingBuf[self.iRingIndex]
-    
-    def print_debug(self):
-        print 'devCalcs: %d' % (self.devCalcs)
-        print 'resets: %d' % (self.resets)
-        print 'startfixes: %d' % (self.startfixes)
-        print 'updates: %d' % (self.updates)
-        print 'checks: %d' % (self.checks)
-        print 'moves: %d' % (self.moves)
-        print 'completes: %d' % (self.completes)
-        print 'restores: %d' % (self.restores)
+        return self.ring_buffer[self.ring_index]
                 
-def load_data():
-    f = open('/Users/ryan/Downloads/eg_data.dat', 'rb')
-    eg_data = pickle.load(f)
-    f.close
-    return eg_data
-
-
-import random
-data = load_data()
-pixPerMM = 1280 / 340
-fp = FixationProcessor(pixPerMM, verbose=True)
-
-for i in range(0,100):
-    print fp.DetectFixation(1, random.normalvariate(640,1), random.normalvariate(480,1))
-print
-for i in range(0,12):
-    print fp.DetectFixation(1, random.normalvariate(200,1), random.normalvariate(200,1))
-print
-for i in range(0,12):
-    print fp.DetectFixation(1, random.normalvariate(900,1), random.normalvariate(900,1))    
+       
+if __name__ == '__main__':
+    
+    FIX = FixationProcessor(1280/340)
+    
+    EGF = open('/home/ryan/Downloads/eg_data.dat', 'rb')
+    
+    for data in pickle.load(EGF):
+        print FIX.detect_fixation(data['status'], data['x'], data['y'])
+    
+    EGF.close  
