@@ -1,6 +1,5 @@
 from __future__ import division
 import math, json, copy
-import pickle
 
 class FixationData(object):
     """NEW,PRES,PREV FIXATION DATA"""
@@ -62,8 +61,10 @@ class FixationProcessor(object):
     RING_SIZE = 121
     
     def __init__(self, px_per_mm, sample_rate=120, min_fixation_ms=100,
-                 gaze_deviation_thresh_mm=6.35):
+                 gaze_deviation_thresh_mm=6.35,realtime=True):
         super(FixationProcessor, self).__init__()
+        
+        self.realtime = realtime
         
         self.min_fix_samples = int(min_fixation_ms * sample_rate / 1000.0)
         if self.min_fix_samples < 3:
@@ -76,6 +77,7 @@ class FixationProcessor(object):
     
         self.ring_buffer = [GazeData() for _ in range(0, self.RING_SIZE)]
         self.ring_index = 0
+        self.ring_index_delay = self.RING_SIZE - self.min_fix_samples
     
         self.call_count = 0
         self.fixations = [FixationData() for _ in range(0, 3)]
@@ -245,8 +247,12 @@ class FixationProcessor(object):
         self.ring_index += 1
         if self.ring_index >= self.RING_SIZE:
             self.ring_index = 0
+        self.ring_index_delay = self.ring_index - self.min_fix_samples
+        if self.ring_index_delay < 0:
+            self.ring_index_delay += self.RING_SIZE
         
         assert (self.ring_index >= 0 and self.ring_index < self.RING_SIZE)
+        assert (self.ring_index_delay >= 0 and self.ring_index_delay < self.RING_SIZE)
         
         self.ring_buffer[self.ring_index].gaze_x = gaze_x
         self.ring_buffer[self.ring_index].gaze_y = gaze_y
@@ -311,10 +317,17 @@ class FixationProcessor(object):
                 else:
                     self.move_new_to_pres()
                                         
-        return self.ring_buffer[self.ring_index]
+        assert (self.ring_index_delay >= 0 and self.ring_index_delay < self.RING_SIZE)
+        
+        if self.realtime:
+            return self.ring_buffer[self.ring_index]
+        else:
+            return self.ring_buffer[self.ring_index_delay]
                 
        
 if __name__ == '__main__':
+    
+    import pickle
     
     FIX = FixationProcessor(1280/340)
     
