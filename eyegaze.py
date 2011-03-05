@@ -41,9 +41,8 @@ class EyeGaze(object):
     
     EgDataStruct = '<3i6fQ2did'
     
-    def __init__(self, host):
+    def __init__(self):
         super(EyeGaze, self).__init__()
-        self.host = host
         self.s = None
         self.do_calibration = False
         self.bg_color = (51, 51, 153)
@@ -177,12 +176,12 @@ class EyeGaze(object):
         msg = header + body
         return msg + self._checksum(msg)
     
-    def connect(self):
+    def connect(self, host):
         """Connect to EGServer"""
         ret = None
         try:
             self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.s.connect((self.host, 3999))
+            self.s.connect((host, 3999))
             self.read_messages = True
             self.thread = Thread(target=self._read_loop)
             self.thread.start()
