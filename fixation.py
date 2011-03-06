@@ -23,7 +23,7 @@ class GazeData(object):
     fix_y = -0.0
     gaze_deviation = -0.1
     sac_duration = 0
-    fix_duration = 0        
+    fix_duration = 0
 
 class FixationProcessor(object):
     """Eye Fixation Analysis Functions"""
@@ -39,11 +39,9 @@ class FixationProcessor(object):
     RING_SIZE = 121
     
     def __init__(self, px_per_mm, sample_rate=120, min_fixation_ms=100,
-                 gaze_deviation_thresh_mm=6.35, realtime=True):
+                 gaze_deviation_thresh_mm=6.35):
         super(FixationProcessor, self).__init__()
-        
-        self.realtime = realtime
-        
+              
         self.min_fix_samples = int(min_fixation_ms * sample_rate / 1000.0)
         if self.min_fix_samples < 3:
             self.min_fix_samples = 3
@@ -299,7 +297,4 @@ class FixationProcessor(object):
         assert (self.ring_index_delay >= 0 and 
                 self.ring_index_delay < self.RING_SIZE)
         
-        if self.realtime:
-            return self.ring_buffer[self.ring_index]
-        else:
-            return self.ring_buffer[self.ring_index_delay]
+        return self.ring_buffer[self.ring_index_delay]
