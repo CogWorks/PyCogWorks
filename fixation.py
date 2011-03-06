@@ -12,15 +12,6 @@ class FixationData(object):
     fX = 0.0
     fY = 0.0
     
-    def __str__(self):
-        return json.dumps({'start_count': self.start_count,
-                           'end_count': self.end_count,
-                           'n_samples': self.n_samples,
-                           'sum_x': self.sum_x,
-                           'sum_y': self.sum_y,
-                           'fX': self.fX,
-                           'fY': self.fY})
-    
 class GazeData(object):
     """RING BUFFER DATA"""
     
@@ -32,20 +23,7 @@ class GazeData(object):
     fix_y = -0.0
     gaze_deviation = -0.1
     sac_duration = 0
-    fix_duration = 0
-    
-    def __str__(self):
-        return json.dumps({'gaze': [int(math.ceil(self.gaze_x)),
-                                    int(math.ceil(self.gaze_y))],
-                           'gaze_found': self.gaze_found,
-                           'eye_motion_state': self.eye_motion_state,
-                           'fix': [int(math.ceil(self.fix_x)),
-                                   int(math.ceil(self.fix_y))],
-                           'gaze_deviation': \
-                                int(math.ceil(self.gaze_deviation)),
-                           'sac_duration': self.sac_duration,
-                           'fix_duration': self.fix_duration})
-        
+    fix_duration = 0        
 
 class FixationProcessor(object):
     """Eye Fixation Analysis Functions"""
@@ -61,7 +39,7 @@ class FixationProcessor(object):
     RING_SIZE = 121
     
     def __init__(self, px_per_mm, sample_rate=120, min_fixation_ms=100,
-                 gaze_deviation_thresh_mm=6.35,realtime=True):
+                 gaze_deviation_thresh_mm=6.35, realtime=True):
         super(FixationProcessor, self).__init__()
         
         self.realtime = realtime
@@ -87,10 +65,10 @@ class FixationProcessor(object):
         self.pres_dv = 0
         self.new_dv = 0
         
-        self.reset_fix(self.PRES_FIX)
-        self.reset_fix(self.NEW_FIX)
+        self._reset_fix(self.PRES_FIX)
+        self._reset_fix(self.NEW_FIX)
         
-    def calc_deviation(self, fix_type, gaze_x, gaze_y):
+    def _calc_deviation(self, fix_type, gaze_x, gaze_y):
         """This function calculates the deviation of the gazepoint from the
         argument fix_type fixation location."""
                
@@ -110,7 +88,7 @@ class FixationProcessor(object):
             
         return fdv
         
-    def reset_fix(self, fix_type):
+    def _reset_fix(self, fix_type):
         """This function resets the argument fix_type fixation, 
         i.e. declares it nonexistent."""
         
@@ -125,7 +103,7 @@ class FixationProcessor(object):
         if fix_type == self.PRES_FIX:
             self.out_samples = 0
             
-    def start_fix(self, fix_type, gaze_x, gaze_y):
+    def _start_fix(self, fix_type, gaze_x, gaze_y):
         """This function starts the argument fix_type fixation at the argument 
         gazepoint and makes sure there is no new fixation hypothesis."""
         
@@ -139,9 +117,9 @@ class FixationProcessor(object):
     
         if fix_type == self.PRES_FIX:
             self.out_samples = 0
-            self.reset_fix(self.NEW_FIX)
+            self._reset_fix(self.NEW_FIX)
             
-    def check_if_fixating(self):
+    def _check_if_fixating(self):
         """This function checks to see whether there are enough samples in the
         PRESENT fixation to declare that the eye is fixating yet, and if there
         is a true fixation going on, it updates the ring buffers to reflect
@@ -166,7 +144,7 @@ class FixationProcessor(object):
                     self.fixations[self.PRES_FIX].end_count - \
                     i - self.fixations[self.PRES_FIX].start_count + 1
 
-    def update_fix(self, fix_type, gaze_x, gaze_y):
+    def _update_fix(self, fix_type, gaze_x, gaze_y):
         """This function updates the argument fix_type fixation with the 
         argument gazepoint, checks if there are enough samples to declare that 
         the eye is now fixating, and makes sure there is no hypothesis for a 
@@ -183,10 +161,10 @@ class FixationProcessor(object):
         
         if fix_type == self.PRES_FIX:
             self.out_samples = 0
-            self.check_if_fixating()
-            self.reset_fix(self.NEW_FIX)
+            self._check_if_fixating()
+            self._reset_fix(self.NEW_FIX)
 
-    def move_new_to_pres(self):
+    def _move_new_to_pres(self):
         """This function copies the new fixation data into the present 
         fixation, and resets the new fixation."""        
         
@@ -194,11 +172,11 @@ class FixationProcessor(object):
         
         self.fixations[self.PRES_FIX] = copy.copy(self.fixations[self.NEW_FIX])
         
-        self.reset_fix(self.NEW_FIX)
+        self._reset_fix(self.NEW_FIX)
         
-        self.check_if_fixating()
+        self._check_if_fixating()
         
-    def declare_completed(self):
+    def _declare_completed(self):
         """This function:
         a) declares the present fixation to be completed,
         b) moves the present fixation to the prior fixation, and
@@ -214,9 +192,9 @@ class FixationProcessor(object):
 
         self.fixations[self.PREV_FIX] = copy.copy(self.fixations[self.PRES_FIX])
 
-        self.move_new_to_pres()
+        self._move_new_to_pres()
         
-    def restore_out_points(self):
+    def _restore_out_points(self):
         """This function restores any previous gazepoints that were left out of 
         the fixation and are now known to be part of the present fixation."""
         
@@ -252,7 +230,8 @@ class FixationProcessor(object):
             self.ring_index_delay += self.RING_SIZE
         
         assert (self.ring_index >= 0 and self.ring_index < self.RING_SIZE)
-        assert (self.ring_index_delay >= 0 and self.ring_index_delay < self.RING_SIZE)
+        assert (self.ring_index_delay >= 0 and 
+                self.ring_index_delay < self.RING_SIZE)
         
         self.ring_buffer[self.ring_index].gaze_x = gaze_x
         self.ring_buffer[self.ring_index].gaze_y = gaze_y
@@ -273,67 +252,54 @@ class FixationProcessor(object):
         
         if gaze_found:
             if self.fixations[self.PRES_FIX].n_samples > 0:
-                self.pres_dv = self.calc_deviation(self.PRES_FIX,
+                self.pres_dv = self._calc_deviation(self.PRES_FIX,
                                                    gaze_x, gaze_y)
                 if self.pres_dv <= self.gaze_deviation_thresh_px:
-                    self.restore_out_points()
-                    self.update_fix(self.PRES_FIX, gaze_x, gaze_y)
+                    self._restore_out_points()
+                    self._update_fix(self.PRES_FIX, gaze_x, gaze_y)
                 else:
                     self.out_samples += 1
                     if self.out_samples <= self.max_out_samples:
                         if self.fixations[self.NEW_FIX].n_samples > 0:
-                            self.new_dv = self.calc_deviation(self.NEW_FIX,
+                            self.new_dv = self._calc_deviation(self.NEW_FIX,
                                                               gaze_x, gaze_y)
                             if self.new_dv <= self.gaze_deviation_thresh_px:
-                                self.update_fix(self.NEW_FIX, gaze_x, gaze_y)
+                                self._update_fix(self.NEW_FIX, gaze_x, gaze_y)
                             else:
-                                self.start_fix(self.NEW_FIX, gaze_x, gaze_y)
+                                self._start_fix(self.NEW_FIX, gaze_x, gaze_y)
                         else:
-                            self.start_fix(self.NEW_FIX, gaze_x, gaze_y)
+                            self._start_fix(self.NEW_FIX, gaze_x, gaze_y)
                     else:    
                         if self.fixations[self.PRES_FIX].n_samples >= \
                             self.min_fix_samples:
-                            self.declare_completed()
+                            self._declare_completed()
                         else:
-                            self.move_new_to_pres()
+                            self._move_new_to_pres()
                         if self.fixations[self.PRES_FIX].n_samples > 0:
-                            self.pres_dv = self.calc_deviation(self.PRES_FIX,
+                            self.pres_dv = self._calc_deviation(self.PRES_FIX,
                                                                gaze_x, gaze_y)
                             if self.pres_dv <= self.gaze_deviation_thresh_px:
-                                self.update_fix(self.PRES_FIX, gaze_x, gaze_y)
+                                self._update_fix(self.PRES_FIX, gaze_x, gaze_y)
                             else:
-                                self.start_fix(self.NEW_FIX, gaze_x, gaze_y)
+                                self._start_fix(self.NEW_FIX, gaze_x, gaze_y)
                         else:
-                            self.start_fix(self.PRES_FIX, gaze_x, gaze_y)
+                            self._start_fix(self.PRES_FIX, gaze_x, gaze_y)
             else:
-                self.start_fix(self.PRES_FIX, gaze_x, gaze_y)
+                self._start_fix(self.PRES_FIX, gaze_x, gaze_y)
         else:
             if self.samples_since_last_good <= self.max_missed_samples:
                 pass
             else:
                 if self.fixations[self.PRES_FIX].n_samples >= \
                     self.min_fix_samples:
-                    self.declare_completed()
+                    self._declare_completed()
                 else:
-                    self.move_new_to_pres()
+                    self._move_new_to_pres()
                                         
-        assert (self.ring_index_delay >= 0 and self.ring_index_delay < self.RING_SIZE)
+        assert (self.ring_index_delay >= 0 and 
+                self.ring_index_delay < self.RING_SIZE)
         
         if self.realtime:
             return self.ring_buffer[self.ring_index]
         else:
             return self.ring_buffer[self.ring_index_delay]
-                
-       
-if __name__ == '__main__':
-    
-    import pickle
-    
-    FIX = FixationProcessor(1280/340)
-    
-    EGF = open('/home/ryan/Downloads/eg_data.dat', 'rb')
-    
-    for data in pickle.load(EGF):
-        print FIX.detect_fixation(data['status'], data['x'], data['y'])
-    
-    EGF.close  

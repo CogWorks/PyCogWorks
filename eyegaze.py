@@ -45,8 +45,8 @@ class EyeGaze(object):
     def __init__(self, display_w_mm=340, display_h_mm=272):
         super(EyeGaze, self).__init__()
         
-        self.display_w_mm  = display_w_mm
-        self.display_h_mm  = display_h_mm
+        self.display_w_mm = display_w_mm
+        self.display_h_mm = display_h_mm
         self.display_w_px = None
         self.display_h_px = None
                 
@@ -65,8 +65,8 @@ class EyeGaze(object):
         
         pygame.display.init()
         info = pygame.display.Info()
-        self.display_w_px  = info.current_w
-        self.display_h_px  = info.current_h
+        self.display_w_px = info.current_w
+        self.display_h_px = info.current_h
         
     def _read_message(self):
         ret = None
