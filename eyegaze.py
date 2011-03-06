@@ -117,7 +117,7 @@ class EyeGaze(object):
                                          'appmarkCount': tmp[12],
                                          'reportTime': tmp[13]}
                     if self.fp:
-                        self.fix_data = self.fp.DetectFixation(self.eg_data['status'], self.eg_data['x'], self.eg_data['y'])
+                        self.fix_data = self.fp.detect_fixation(self.eg_data['status'], self.eg_data['x'], self.eg_data['y'])
                 elif val[0] == self.WORKSTATION_QUERY:
                     body = "%4d,%4d,%4d,%4d,%4d,%4d,%4d,%4d" % (self.display_w_mm,
                                                                 self.display_h_mm,
@@ -218,7 +218,8 @@ class EyeGaze(object):
             standalone = True
             self.screen = pygame.display.set_mode((self.display_w_px, self.display_h_px), pygame.FULLSCREEN | pygame.HWSURFACE | pygame.DOUBLEBUF)
         pygame.mouse.set_visible(False)
-        self.surf = pygame.Surface((self.width, self.height))
+        self.surf = pygame.Surface((self.display_w_px, self.display_h_px))
+        self.surf_rect = self.surf.get_rect()
         pygame.font.init()
         self.eg_font = pygame.font.SysFont('courier', 18, bold=True)
         self._send_message(self._format_message(10))
@@ -292,6 +293,7 @@ class EyeGaze(object):
         pygame.display.init()
         pygame.font.init()
         pygame.mouse.set_visible(False)
+        self._update_display_info()
         if fullscreen:
             self.screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN | pygame.HWSURFACE | pygame.DOUBLEBUF)
         else:
@@ -308,17 +310,18 @@ class EyeGaze(object):
             self.screen.fill((0, 0, 0))
             if self.eg_data:
                 self.surf.fill((0, 0, 0))
-                if self.process_fixations and self.fix_data and self.fix_data.eye_motion_state == 1:
-                    pygame.draw.line(self.surf, (255, 0, 0),
-                                     (self.fix_data.fix_x - 10, self.fix_data.fix_y),
-                                     (self.fix_data.fix_x + 10, self.fix_data.fix_y))
-                    pygame.draw.line(self.surf, (255, 0, 0),
-                                     (self.fix_data.fix_x, self.fix_data.fix_y - 10),
-                                     (self.fix_data.fix_x, self.fix_data.fix_y + 10))
+                if self.process_fixations:
+                    if self.fix_data and self.fix_data.eye_motion_state == 1:
+                        pygame.draw.line(self.surf, (255, 0, 0),
+                                         (self.fix_data.fix_x - 10, self.fix_data.fix_y),
+                                         (self.fix_data.fix_x + 10, self.fix_data.fix_y))
+                        pygame.draw.line(self.surf, (255, 0, 0),
+                                         (self.fix_data.fix_x, self.fix_data.fix_y - 10),
+                                         (self.fix_data.fix_x, self.fix_data.fix_y + 10))
                 else:
                     pygame.draw.line(self.surf, (255, 0, 0),
-                                     (self.eg_data['x'] - 10, self.eg_data[-1]['y']),
-                                     (self.eg_data['x'] + 10, self.eg_data[-1]['y']))
+                                     (self.eg_data['x'] - 10, self.eg_data['y']),
+                                     (self.eg_data['x'] + 10, self.eg_data['y']))
                     pygame.draw.line(self.surf, (255, 0, 0),
                                      (self.eg_data['x'], self.eg_data['y'] - 10),
                                      (self.eg_data['x'], self.eg_data['y'] + 10))
