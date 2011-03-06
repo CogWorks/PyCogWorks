@@ -1,5 +1,5 @@
 from __future__ import division
-import math, json, copy
+import math, copy
 
 class FixationData(object):
     """NEW,PRES,PREV FIXATION DATA"""
