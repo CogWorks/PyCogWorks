@@ -311,7 +311,7 @@ class EyeGaze(object):
             if self.eg_data:
                 self.surf.fill((0, 0, 0))
                 if self.process_fixations:
-                    if self.fix_data and self.fix_data.eye_motion_state == 1:
+                    if self.fix_data and self.fix_data.eye_motion_state > 0:
                         pygame.draw.line(self.surf, (255, 0, 0),
                                          (self.fix_data.fix_x - 10, self.fix_data.fix_y),
                                          (self.fix_data.fix_x + 10, self.fix_data.fix_y))
