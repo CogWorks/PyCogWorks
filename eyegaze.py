@@ -1,3 +1,4 @@
+from __future__ import division
 import socket, math, string, pygame, struct
 from threading import Thread
 from fixation import *
@@ -41,8 +42,15 @@ class EyeGaze(object):
     
     EgDataStruct = '<3i6fQ2did'
     
-    def __init__(self):
+    def __init__(self, display_w_mm=340, display_h_mm=272):
         super(EyeGaze, self).__init__()
+        
+        self.display_w_mm  = display_w_mm
+        self.display_h_mm  = display_h_mm
+        self.display_w_px = None
+        self.display_h_px = None
+                
+        self.fp = None
         self.s = None
         self.do_calibration = False
         self.bg_color = (51, 51, 153)
@@ -52,7 +60,13 @@ class EyeGaze(object):
         self.eg_data = None
         self.fix_data = None
         self.process_fixations = True
-        self.fp = FixationProcessor(1280. / 340.)
+        
+    def _update_display_info(self):
+        
+        pygame.display.init()
+        info = pygame.display.Info()
+        self.display_w_px  = info.current_w
+        self.display_h_px  = info.current_h
         
     def _read_message(self):
         ret = None
@@ -102,20 +116,17 @@ class EyeGaze(object):
                                          'appmarkTime': tmp[11],
                                          'appmarkCount': tmp[12],
                                          'reportTime': tmp[13]}
-                    if self.process_fixations:
-                        f = self.fp.DetectFixation(self.eg_data['status'], self.eg_data['x'], self.eg_data['y'])
-                        if f.iEyeMotionState == 2:
-                            print f
-                            self.fix_data = f
+                    if self.fp:
+                        self.fix_data = self.fp.DetectFixation(self.eg_data['status'], self.eg_data['x'], self.eg_data['y'])
                 elif val[0] == self.WORKSTATION_QUERY:
-                    body = "%4d,%4d,%4d,%4d,%4d,%4d,%4d,%4d" % (self.screen_x_dimm,
-                                                                self.screen_y_dimm,
-                                                                self.width,
-                                                                self.height,
-                                                                self.width,
-                                                                self.height,
-                                                                self.x_offset,
-                                                                self.y_offset)               
+                    body = "%4d,%4d,%4d,%4d,%4d,%4d,%4d,%4d" % (self.display_w_mm,
+                                                                self.display_h_mm,
+                                                                self.display_w_px,
+                                                                self.display_h_px,
+                                                                self.display_w_px,
+                                                                self.display_h_px,
+                                                                0,
+                                                                0)               
                     self._send_message(self._format_message(12, body))
                 elif val[0] == self.CLEAR_SCREEN:
                     code = {'code': val[0]}
@@ -196,25 +207,19 @@ class EyeGaze(object):
         self.s.close()
         self.s = None
     
-    def calibrate(self, screen=pygame.display.get_surface(), bgcolor=(51, 51, 153),
-                  screen_x_dimm=340, screen_y_dimm=272):
+    def calibrate(self, screen=pygame.display.get_surface(), bgcolor=(51, 51, 153)):
         """Start calibration procedure"""
         self.bg_color = bgcolor
-        self.screen_x_dimm = screen_x_dimm
-        self.screen_y_dimm = screen_y_dimm
         standalone = False
+        self._update_display_info()
         if screen:
             self.screen = screen
         else:
             standalone = True
-            pygame.display.init()
-            pygame.font.init()
-            pygame.mouse.set_visible(False)
-            self.screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN | pygame.HWSURFACE | pygame.DOUBLEBUF)
-        self.width, self.height = self.screen.get_size()
+            self.screen = pygame.display.set_mode((self.display_w_px, self.display_h_px), pygame.FULLSCREEN | pygame.HWSURFACE | pygame.DOUBLEBUF)
+        pygame.mouse.set_visible(False)
         self.surf = pygame.Surface((self.width, self.height))
-        self.surf_rect = self.surf.get_rect()
-        self.x_offset, self.y_offset = self.surf_rect.topleft
+        pygame.font.init()
         self.eg_font = pygame.font.SysFont('courier', 18, bold=True)
         self._send_message(self._format_message(10))
         ret = True
@@ -274,11 +279,14 @@ class EyeGaze(object):
         
     def data_start(self):
         """Start data logging"""
+        if self.process_fixations:
+            self.fp = FixationProcessor(self.display_w_px / self.display_w_mm)
         self._send_message(self._format_message(self.BEGIN_SENDING_DATA))
         
     def data_stop(self):
         """Stop data logging"""
         self._send_message(self._format_message(self.STOP_SENDING_DATA))
+        self.fp = None
         
     def trace_test(self, fullscreen=True):
         pygame.display.init()
@@ -300,13 +308,13 @@ class EyeGaze(object):
             self.screen.fill((0, 0, 0))
             if self.eg_data:
                 self.surf.fill((0, 0, 0))
-                if self.process_fixations:
+                if self.process_fixations and self.fix_data and self.fix_data.eye_motion_state == 1:
                     pygame.draw.line(self.surf, (255, 0, 0),
-                                     (self.fix_data.fXFix - 10, self.fix_data.fYFix),
-                                     (self.fix_data.fXFix + 10, self.fix_data.fYFix))
+                                     (self.fix_data.fix_x - 10, self.fix_data.fix_y),
+                                     (self.fix_data.fix_x + 10, self.fix_data.fix_y))
                     pygame.draw.line(self.surf, (255, 0, 0),
-                                     (self.fix_data.fXFix, self.fix_data.fYFix - 10),
-                                     (self.fix_data.fXFix, self.fix_data.fYFix + 10))
+                                     (self.fix_data.fix_x, self.fix_data.fix_y - 10),
+                                     (self.fix_data.fix_x, self.fix_data.fix_y + 10))
                 else:
                     pygame.draw.line(self.surf, (255, 0, 0),
                                      (self.eg_data['x'] - 10, self.eg_data[-1]['y']),
