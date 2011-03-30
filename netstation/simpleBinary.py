@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+from __future__ import division
 import sys, struct, pprint
 
 HEADER_MAGIC = '>IHHHHHHIHHHHHIH'
@@ -26,20 +27,25 @@ def read(file):
     events = []
     for i in range(0, header['nEvt']):
         events.append(struct.unpack(EVENT_MAGIC, file.read(struct.calcsize(EVENT_MAGIC))))
-    print (header,events)
     
     if header['verNum'] == 2:
         prec = 'h'
     elif header['verNum'] == 4:
         perc = 'f'
-    if header['verNum'] == 6:
+    elif header['verNum'] == 6:
         perc = 'd'
-    MAGIC = '>ff'
-    print struct.unpack(MAGIC, file.read(struct.calcsize(MAGIC)))
+    MAGIC = '>%s' % (perc * header['nSmpl'])
+    
+    data = [None] * header['nChan']
+    for i in range(0, header['nChan']-1):
+        data[i] = struct.unpack(MAGIC, file.read(struct.calcsize(MAGIC)))
+        file.read(1)
+        
+    return (header, events, data)
+    
 if __name__ == '__main__':
     
     for arg in sys.argv[1:]:
-        print arg
         f = open(arg,'r')
         read(f)
         f.close()
