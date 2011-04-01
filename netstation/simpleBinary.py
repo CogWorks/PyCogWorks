@@ -4,7 +4,7 @@ from __future__ import division
 import sys, struct, pprint
 
 HEADER_MAGIC = '>IHHHHHHIHHHHHIH'
-EVENT_MAGIC = '>CCCC'
+EVENT_MAGIC = '>cccc'
 
 def read(file):
     header = struct.unpack(HEADER_MAGIC, file.read(struct.calcsize(HEADER_MAGIC)))
@@ -24,9 +24,19 @@ def read(file):
               'ampRange': header[12],
               'nSmpl': header[13],
               'nEvt': header[14]}
+    print header
+    
     events = []
     for i in range(0, header['nEvt']):
-        events.append(struct.unpack(EVENT_MAGIC, file.read(struct.calcsize(EVENT_MAGIC))))
+        events.append(''.join(struct.unpack(EVENT_MAGIC, file.read(struct.calcsize(EVENT_MAGIC)))))
+    print events
+    
+    print
+    MAGIC = '>%s' % ('bbbb' * header['nSmpl'])
+    evtData = [None] * header['nEvt']
+    for i in range(0, header['nEvt']):
+        evtData[i] = struct.unpack(MAGIC, file.read(struct.calcsize(MAGIC)))
+        print evtData[i][:20]
     
     if header['verNum'] == 2:
         prec = 'h'
@@ -36,12 +46,18 @@ def read(file):
         perc = 'd'
     MAGIC = '>%s' % (perc * header['nSmpl'])
     
+    print
+       
     data = [None] * header['nChan']
-    for i in range(0, header['nChan']-1):
+    for i in range(0, header['nChan']):
         data[i] = struct.unpack(MAGIC, file.read(struct.calcsize(MAGIC)))
-        file.read(1)
+        print data[i][:20]
         
-    return (header, events, data)
+    print
+        
+    print len(file.read())
+        
+    return (header, events, data, evtData)
     
 if __name__ == '__main__':
     
