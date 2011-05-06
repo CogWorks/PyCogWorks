@@ -64,8 +64,6 @@ class FixationProcessor(object):
         self.pres_dv = 0
         self.new_dv = 0
         
-        self.count = 0
-        
         self._reset_fix(self.PRES_FIX)
         self._reset_fix(self.NEW_FIX)
         
@@ -103,8 +101,6 @@ class FixationProcessor(object):
         
         if fix_type == self.PRES_FIX:
             self.out_samples = 0
-            
-        self.fixations[fix_type].fix_number = self.count + 1
             
     def _start_fix(self, fix_type, gaze_x, gaze_y):
         """This function starts the argument fix_type fixation at the argument 
@@ -196,8 +192,6 @@ class FixationProcessor(object):
         self.fixations[self.PREV_FIX] = copy.copy(self.fixations[self.PRES_FIX])
 
         self._move_new_to_pres()
-        
-        self.count += 1
         
     def _restore_out_points(self):
         """This function restores any previous gazepoints that were left out of 

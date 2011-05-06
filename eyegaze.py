@@ -59,6 +59,7 @@ class EyeGaze(object):
         self.eg_font = None
         self.eg_data = None
         self.fix_data = None
+        self.fix_count = 0
         self.process_fixations = True
         
     def _update_display_info(self):
@@ -118,6 +119,8 @@ class EyeGaze(object):
                                          'reportTime': tmp[13]}
                     if self.fp:
                         self.fix_data = self.fp.detect_fixation(self.eg_data['status'], self.eg_data['x'], self.eg_data['y'])
+                    if self.fix_data.eye_motion_state == 2:
+                        self.fix_count += 1
                 elif val[0] == self.WORKSTATION_QUERY:
                     body = "%4d,%4d,%4d,%4d,%4d,%4d,%4d,%4d" % (self.display_w_mm,
                                                                 self.display_h_mm,
