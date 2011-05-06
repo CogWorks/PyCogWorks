@@ -192,12 +192,12 @@ class FixationProcessor(object):
         
         self.ring_buffer[ring_index_completed].eye_motion_state = \
             self.FIXATION_COMPLETED
-            
-        self.count += 1
 
         self.fixations[self.PREV_FIX] = copy.copy(self.fixations[self.PRES_FIX])
 
         self._move_new_to_pres()
+        
+        self.count += 1
         
     def _restore_out_points(self):
         """This function restores any previous gazepoints that were left out of 
