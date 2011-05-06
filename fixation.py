@@ -24,6 +24,7 @@ class GazeData(object):
     gaze_deviation = -0.1
     sac_duration = 0
     fix_duration = 0
+    fix_number = 0
 
 class FixationProcessor(object):
     """Eye Fixation Analysis Functions"""
@@ -63,6 +64,8 @@ class FixationProcessor(object):
         self.pres_dv = 0
         self.new_dv = 0
         
+        self.count = 0
+        
         self._reset_fix(self.PRES_FIX)
         self._reset_fix(self.NEW_FIX)
         
@@ -100,6 +103,8 @@ class FixationProcessor(object):
         
         if fix_type == self.PRES_FIX:
             self.out_samples = 0
+            
+        self.fixations[fix_type].fix_number = self.count + 1
             
     def _start_fix(self, fix_type, gaze_x, gaze_y):
         """This function starts the argument fix_type fixation at the argument 
@@ -187,6 +192,8 @@ class FixationProcessor(object):
         
         self.ring_buffer[ring_index_completed].eye_motion_state = \
             self.FIXATION_COMPLETED
+            
+        self.count += 1
 
         self.fixations[self.PREV_FIX] = copy.copy(self.fixations[self.PRES_FIX])
 
