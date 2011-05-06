@@ -1,5 +1,5 @@
 from __future__ import division
-import socket, math, string, pygame, struct
+import socket, math, string, pygame, struct, time
 from threading import Thread
 from fixation import *
 
@@ -61,6 +61,10 @@ class EyeGaze(object):
         self.fix_data = None
         self.fix_count = 0
         self.process_fixations = True
+        self.gaze_log_fn = None
+        self.fix_log_fn = None
+        self.gaze_log = None
+        self.fix_log = None
         
     def _update_display_info(self):
         
@@ -100,6 +104,8 @@ class EyeGaze(object):
                                          'pupil': int(d[8:11]),
                                          'x': int(d[0:4]),
                                          'y': int(d[4:8])}
+                        if self.gaze_log:
+                            self.gaze_log.write('%f\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n' % (time.time(), pygame.time.get_ticks(), int(d[14:24]), int(d[12:14]), int(d[11:12]), int(d[8:11]), int(d[0:4]), int(d[4:8])))
                     elif len(val[1]) == 78:
                         tmp = struct.unpack(self.EgDataStruct, d[1:-5])
                         self.eg_data = {'camera': ord(d[0]),
@@ -119,6 +125,8 @@ class EyeGaze(object):
                                          'reportTime': tmp[13]}
                     if self.fp:
                         self.fix_data = self.fp.detect_fixation(self.eg_data['status'], self.eg_data['x'], self.eg_data['y'])
+                        if self.fix_log:
+                            self.fix_log.write('%f\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n' % (time.time(), pygame.time.get_ticks(), self.fix_data.gaze_found, self.fix_data.gaze_x, self.fix_data.gaze_y, self.fix_data.eye_motion_state, self.fix_data.fix_x, self.fix_data.fix_y, self.fix_data.gaze_deviation, self.fix_data.sac_duration, self.fix_data.fix_duration))
                     if self.fix_data.eye_motion_state == 2:
                         self.fix_count += 1
                 elif val[0] == self.WORKSTATION_QUERY:
@@ -291,6 +299,18 @@ class EyeGaze(object):
         """Stop data logging"""
         self._send_message(self._format_message(self.STOP_SENDING_DATA))
         self.fp = None
+        
+    def start_logging(self):
+        if self.gaze_log_fn:
+            self.gaze_log = open(self.gaze_log_fn, "w")
+        if self.fix_log_fn:
+            self.fix_log = open(self.fix_log_fn, "w")
+        
+    def stop_logging(self):
+        if self.gaze_log:
+            self.gaze_log.close()
+        if self.fix_log:
+            self.fix_log.close()
         
     def trace_test(self, fullscreen=True):
         pygame.display.init()

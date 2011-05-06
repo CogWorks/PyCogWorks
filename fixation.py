@@ -24,7 +24,6 @@ class GazeData(object):
     gaze_deviation = -0.1
     sac_duration = 0
     fix_duration = 0
-    fix_number = 0
 
 class FixationProcessor(object):
     """Eye Fixation Analysis Functions"""
