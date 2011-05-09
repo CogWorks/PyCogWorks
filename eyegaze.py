@@ -1,5 +1,6 @@
 from __future__ import division
 import socket, math, string, pygame, struct, time
+import numpy as np
 from threading import Thread
 from fixation import *
 
@@ -40,7 +41,8 @@ class EyeGaze(object):
     BEGIN_SENDING_VERGENCE = 40
     STOP_SENDING_VERGENCE = 41
     
-    EgDataStruct = '<3i6fQ2did'
+    #EgDataStruct = '<3i6fQ2did'
+    EgDataStruct = '3i6fI2did'
     
     def __init__(self, display_w_mm=340, display_h_mm=272):
         super(EyeGaze, self).__init__()
@@ -123,6 +125,8 @@ class EyeGaze(object):
                                          'appmarkTime': tmp[11],
                                          'appmarkCount': tmp[12],
                                          'reportTime': tmp[13]}
+                        if self.gaze_log:
+                            self.gaze_log.write('%d\t%d\t%d\t%d\t%f\t%f\t%f\t%f\t%f\t%f\t%d\t%f\t%f\t%d\t%f\n' % (ord(d[0]), tmp[0], tmp[1], tmp[2], tmp[3], tmp[4], tmp[5], tmp[6], tmp[7], tmp[8], tmp[9], tmp[10], tmp[11], tmp[12], tmp[13]))
                     if self.fp:
                         self.fix_data = self.fp.detect_fixation(self.eg_data['status'], self.eg_data['x'], self.eg_data['y'])
                         if self.fix_log:
