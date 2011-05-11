@@ -11,6 +11,7 @@ class FixationData(object):
     sum_y = 0.0
     fX = 0.0
     fY = 0.0
+    timestamp = 0.0
     
 class GazeData(object):
     """RING BUFFER DATA"""
@@ -24,6 +25,7 @@ class GazeData(object):
     gaze_deviation = -0.1
     sac_duration = 0
     fix_duration = 0
+    timestamp = 0.0
 
 class FixationProcessor(object):
     """Eye Fixation Analysis Functions"""
