@@ -55,7 +55,7 @@ class FixationProcessor(object):
     
         self.ring_buffer = [GazeData() for _ in range(0, self.RING_SIZE)]
         self.ring_index = 0
-        self.ring_index_delay = self.RING_SIZE - self.min_fix_samples
+        self.ring_index_delay = 0#self.RING_SIZE - self.min_fix_samples
     
         self.call_count = 0
         self.fixations = [FixationData() for _ in range(0, 3)]
