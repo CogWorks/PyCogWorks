@@ -129,7 +129,7 @@ class EyeGaze(object):
                                          'appmarkCount': tmp[12],
                                          'reportTime': tmp[13]}
                         if self.gaze_log:
-                            self.gaze_log.write('%d\t%d\t%d\t%d\t%f\t%f\t%f\t%f\t%f\t%f\t%d\t%f\t%f\t%d\t%f\n' % (ord(d[0]), tmp[0], tmp[1], tmp[2], tmp[3], tmp[4], tmp[5], tmp[6], tmp[7], tmp[8], tmp[9], tmp[10], tmp[11], tmp[12], tmp[13]))
+                            self.gaze_log.write('%f\t%d\t%d\t%d\t%d\t%d\t%f\t%f\t%f\t%f\t%f\t%f\t%d\t%f\t%f\t%d\t%f\n' % (time.time(), pygame.time.get_ticks(), ord(d[0]), tmp[0], tmp[1], tmp[2], tmp[3], tmp[4], tmp[5], tmp[6], tmp[7], tmp[8], tmp[9], tmp[10], tmp[11], tmp[12], tmp[13]))
                             if self.fp:
                                 self.fix_data = self.fp.detect_fixation(tmp[0], tmp[1], tmp[2])
                                 self.fix_data.timestamp = tmp[10]
