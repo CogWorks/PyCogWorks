@@ -69,6 +69,9 @@ class EyeGaze(object):
         self.gaze_log = None
         self.fix_log = None
         
+        self.gaze_callback = None
+        self.fixation_callback = None
+
     def _update_display_info(self):
         
         pygame.display.init()
@@ -129,6 +132,8 @@ class EyeGaze(object):
                                          'reportTime': tmp[13]}
                         if self.gaze_log:
                             self.gaze_log.write('%f\t%f\t%d\t%d\t%d\t%d\t%d\t%f\t%f\t%f\t%f\t%f\t%f\t%d\t%f\t%f\t%d\t%f\n' % (time.time(), time.clock(), pygame.time.get_ticks(), ord(d[0]), tmp[0], tmp[1], tmp[2], tmp[3], tmp[4], tmp[5], tmp[6], tmp[7], tmp[8], tmp[9], tmp[10], tmp[11], tmp[12], tmp[13]))
+                    if self.gaze_callback:
+                        self.gaze_callback(self.eg_data)
                     if self.fp:
                         self.fix_data = self.fp.detect_fixation(self.eg_data['status'], self.eg_data['x'], self.eg_data['y'])
                         self.fix_data.timestamp = self.eg_data['timestamp']
@@ -136,6 +141,8 @@ class EyeGaze(object):
                             self.fix_log.write('%f\t%f\t%d\t%f\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n' % (time.time(), time.clock(), pygame.time.get_ticks(), self.fix_data.timestamp, self.fix_data.gaze_found, self.fix_data.gaze_x, self.fix_data.gaze_y, self.fix_data.eye_motion_state, self.fix_data.fix_x, self.fix_data.fix_y, self.fix_data.gaze_deviation, self.fix_data.sac_duration, self.fix_data.fix_duration))
                         if self.fix_data.eye_motion_state == 2:
                             self.fix_count += 1
+                        if self.fixation_callback:
+                            self.fixation_callback(self.fix_data)
                 elif val[0] == self.WORKSTATION_QUERY:
                     body = "%4d,%4d,%4d,%4d,%4d,%4d,%4d,%4d" % (self.display_w_mm,
                                                                 self.display_h_mm,
