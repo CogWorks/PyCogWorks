@@ -108,10 +108,7 @@ class EyeGaze(object):
                                          'x': int(d[0:4]),
                                          'y': int(d[4:8])}
                         if self.gaze_log:
-                            self.gaze_log.write('%f\t%f\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n' % (time.time(), time.clock(), pygame.time.get_ticks(), int(d[14:24]), int(d[12:14]), int(d[11:12]), int(d[8:11]), int(d[0:4]), int(d[4:8])))
-                        if self.fp:
-                            self.fix_data = self.fp.detect_fixation(self.eg_data['status'], self.eg_data['x'], self.eg_data['y'])
-                            self.fix_data.timestamp = int(d[14:24])                            
+                            self.gaze_log.write('%f\t%f\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n' % (time.time(), time.clock(), pygame.time.get_ticks(), int(d[14:24]), int(d[12:14]), int(d[11:12]), int(d[8:11]), int(d[0:4]), int(d[4:8])))                            
                     elif len(val[1]) == 78:
                         tmp = struct.unpack(self.EgDataStruct, d[1:-5])
                         self.eg_data = {'camera': ord(d[0]),
@@ -125,19 +122,19 @@ class EyeGaze(object):
                                          'focusRangeOffset': tmp[7],
                                          'lensExtOffset': tmp[8],
                                          'fieldcount': tmp[9],
+                                         'timestamp': tmp[10],
                                          'gazetime': tmp[10],
                                          'appmarkTime': tmp[11],
                                          'appmarkCount': tmp[12],
                                          'reportTime': tmp[13]}
                         if self.gaze_log:
                             self.gaze_log.write('%f\t%f\t%d\t%d\t%d\t%d\t%d\t%f\t%f\t%f\t%f\t%f\t%f\t%d\t%f\t%f\t%d\t%f\n' % (time.time(), time.clock(), pygame.time.get_ticks(), ord(d[0]), tmp[0], tmp[1], tmp[2], tmp[3], tmp[4], tmp[5], tmp[6], tmp[7], tmp[8], tmp[9], tmp[10], tmp[11], tmp[12], tmp[13]))
-                        if self.fp:
-                            self.fix_data = self.fp.detect_fixation(tmp[0], tmp[1], tmp[2])
-                            self.fix_data.timestamp = tmp[10]
-                    if self.process_fixations and self.fix_data:
-			if self.fix_log:
+                    if self.fp:
+                        self.fix_data = self.fp.detect_fixation(self.eg_data['status'], self.eg_data['x'], self.eg_data['y'])
+                        self.fix_data.timestamp = self.eg_data['timestamp']
+                        if self.fix_log:
                             self.fix_log.write('%f\t%f\t%d\t%f\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n' % (time.time(), time.clock(), pygame.time.get_ticks(), self.fix_data.timestamp, self.fix_data.gaze_found, self.fix_data.gaze_x, self.fix_data.gaze_y, self.fix_data.eye_motion_state, self.fix_data.fix_x, self.fix_data.fix_y, self.fix_data.gaze_deviation, self.fix_data.sac_duration, self.fix_data.fix_duration))
-                    	if self.fix_data.eye_motion_state == 2:
+                        if self.fix_data.eye_motion_state == 2:
                             self.fix_count += 1
                 elif val[0] == self.WORKSTATION_QUERY:
                     body = "%4d,%4d,%4d,%4d,%4d,%4d,%4d,%4d" % (self.display_w_mm,
