@@ -8,7 +8,7 @@ setup(
     name = 'PyCogWorks',
     version = version,
     
-    include_package_data = True,
+    packages = ['pycogworks'],
 
     description = 'Miscellaneous functions used in the CogWorks lab.',
     long_description = open( descr_file ).read(),
