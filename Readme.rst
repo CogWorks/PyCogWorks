@@ -4,8 +4,33 @@ PyCogWorks
 
 ``pycogworks`` is a Python package with miscellaneous functions used in the CogWorks lab.
 
+GUI Functions
+=============
+
+pycogworks.getSubjectInfo
+-------------------------
+Creates a GUI dialog to collect subject information. The default dialog collects subjects
+first name, last name and RIN. Additional fields can be collected by passing an array
+of field names to ``getSubjectInfo``. ``getSubjectInfo`` returns a dict of subject information
+where the keys are the field names converted to lower case and spaces replaced with underscores.
+::
+
+  >>> getSubjectInfo(["Age"])
+  {'rin': u'123456789', 'first_name': u'Foo', 'last_name': u'Bar', 'age': u'18'}
+  
+.. image:: http://ompldr.org/vZm5ldw
+
+
 Logging Functions
 =================
+
+pycogworks.getDateTimeStamp
+---------------------------
+Returns the most accurate timestamp possible for the current OS.
+::
+
+  >>> get_time()
+  1348684540.905437
 
 pycogworks.getDateTimeStamp
 ---------------------------

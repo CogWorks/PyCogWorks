@@ -28,6 +28,3 @@ def writeHistoryFile(filename, subjectInfo):
         history.close()
     else:
         raise Exception("The 'subjectInfo' dict must contain a 'rin' field!")
-    
-if __name__ == '__main__':
-    writeHistoryFile("test.history",{"foo":"bar","rin":"123456789"})
