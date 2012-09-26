@@ -21,8 +21,11 @@ def writeHistoryFile(filename, subjectInfo):
         if len(rin) != 9:
             raise Exception("The 'rin' field value must have a length of 9.")
         eid = rin2id(rin)
-        subjectInfo['encrypted_rin'] = eid
-        subjectInfo['cipher'] = 'AES/CBC (RIJNDAEL) - 16Byte Key'
+        if 'encrypted_rin' in subjectInfo and subjectInfo['encrypted_rin'] != eid:
+            raise Exception("Invalid 'encrypted_rin' value for given 'rin'.")
+        else:
+            subjectInfo['encrypted_rin'] = eid
+            subjectInfo['cipher'] = 'AES/CBC (RIJNDAEL) - 16Byte Key'
         history = open(filename, 'w')
         history.write(json.dumps(subjectInfo, sort_keys=True, indent=4))
         history.close()

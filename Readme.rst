@@ -13,6 +13,7 @@ Creates a GUI dialog to collect subject information. The default dialog collects
 first name, last name and RIN. Additional fields can be collected by passing an array
 of field names to ``getSubjectInfo``. ``getSubjectInfo`` returns a dict of subject information
 where the keys are the field names converted to lower case and spaces replaced with underscores.
+The RIN field is automatically encrypted using ``pycogworks.rin2id`` and stored in the 'encrypted_rin' field.
 ::
 
   >>> getSubjectInfo(["Age"])
@@ -57,8 +58,9 @@ pycogworks.writeHistoryFile
 
 Takes a ``dict`` of subject information and writes a history file.
 The subject information dict must contain a field called 'rin' with a value that contains a valid 9 digit RIN.
-The RIN is enrypted and added to the subject information dict under the field 'encrypted_rin'. The new
-subject information dict is then encoded as a JSON string and written to a file.
+If the subject information dict does not already contain an 'encrypted_rin' field, the RIN will be enrypted and
+added to the subject information dict under the field 'encrypted_rin'. The subject information dict is then encoded 
+as a JSON string and written to a file.
 ::
 
   >>> writeHistoryFile("test.history",{"foo":"bar","rin":"123456789"})

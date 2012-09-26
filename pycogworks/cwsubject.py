@@ -3,6 +3,8 @@ import sys
 from PySide.QtCore import *
 from PySide.QtGui import *
 
+from logging import rin2id
+
 class SubjectWindow(QDialog):
     
     def __init__(self, app, custom_fields=None):
@@ -70,6 +72,8 @@ class SubjectWindow(QDialog):
             self.values = {}
             for field in self.field_widgets:
                 self.values[field.lower().replace(" ","_")] = self.field_widgets[field].text()
+            self.values['encrypted_rin'] = rin2id(self.values['rin'])
+            self.values['cipher'] = 'AES/CBC (RIJNDAEL) - 16Byte Key'
             self.setResult(True)
             self.done(True)
         elif button == self.cancel:
