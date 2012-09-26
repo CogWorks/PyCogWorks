@@ -1,10 +1,7 @@
-import sys, os
+import sys
 
 from PySide.QtCore import *
 from PySide.QtGui import *
-
-import json
-import datetime
 
 class SubjectWindow(QDialog):
     
@@ -103,19 +100,6 @@ def getSubjectInfo(minimal=False):
     sw = SubjectWindow(app,minimal)
     app.exec_()
     return sw.values
-
-def makeLogFileBase(prefix):
-    d = datetime.datetime.now().timetuple()
-    if prefix:
-        return "%s_%d-%d-%d_%d-%d-%d"%(prefix, d[0], d[1], d[2], d[3], d[4], d[5])
-    else:
-        return "%d-%d-%d_%d-%d-%d"%(d[0], d[1], d[2], d[3], d[4], d[5])
-    
-
-def writeHistoryFile(basename, subjectInfo):
-    history = open(basename + ".history", 'w')
-    history.write(json.dumps(subjectInfo, sort_keys=True, indent=4))
-    history.close()
 
 if __name__ == '__main__':
     print getSubjectInfo()
