@@ -5,20 +5,18 @@ PyCogWorks
 ``pycogworks`` is a Python package with miscellaneous functions used in the CogWorks lab.
 
 Installation
-------------
+============
 ``pycogworks`` can be installed using 'pip'.
 ::
 
   # pip install pycogworks
   
 Dependencies
-------------
+============
 ``pycogworks`` has the following dependencies:
 
-- PyCrypto (for ``pycogworks.rin2id``)
-- PySide (for ``pycogworks.getSubjectInfo``)
-
-``pycrypto`` can be installed using 'pip'. To install PySide follow the download instructions here: http://qt-project.org/wiki/PySideDownloads
+- `PyCrypto <http://pypi.python.org/pypi/pycrypto/2.6>`_
+- `PySide <http://qt-project.org/wiki/PySideDownloads>`_
 
 GUI Functions
 =============
