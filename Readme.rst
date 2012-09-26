@@ -18,7 +18,7 @@ Dependencies
 - PyCrypto (for ``pycogworks.rin2id``)
 - PySide (for ``pycogworks.getSubjectInfo``)
 
-``pycrypto`` can be installed using 'pip'. To install PySide follow the download instructions 
+``pycrypto`` can be installed using 'pip'. To install PySide follow the download instructions here: http://qt-project.org/wiki/PySideDownloads
 
 GUI Functions
 =============
