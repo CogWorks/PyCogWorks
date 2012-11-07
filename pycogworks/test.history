@@ -1,6 +1,0 @@
-{
-    "cipher": "AES/CBC (RIJNDAEL) - 16Byte Key", 
-    "encrypted_rin": "300fe9abdca99d4a32cb2c43f2a69c5c", 
-    "foo": "bar", 
-    "rin": "123456789"
-}
