@@ -17,4 +17,4 @@
 # along with PyCogWorks.  If not, see <http://www.gnu.org/licenses/>.
 #===============================================================================
 
-from logging import get_time, getTime, getDateTimeStamp, writeHistoryFile
+__import__('pkg_resources').declare_namespace(__name__)

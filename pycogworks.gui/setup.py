@@ -27,6 +27,6 @@ setup(
     license='GPL-3',
 	install_requires=[
 					'pyside',
-                    'pycogworks.logging'
+                    'pycogworks.crypto'
 	]
  )

@@ -22,7 +22,7 @@ import sys
 from PySide.QtCore import *
 from PySide.QtGui import *
 
-from logging import rin2id
+from pycogworks.crypto import rin2id
 
 class SubjectWindow(QDialog):
     
