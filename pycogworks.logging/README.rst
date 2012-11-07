@@ -26,7 +26,7 @@ Generates a date/time stamp usefull in logs and for log filenames.
 ::
 
   >>> getDateTimeStamp()
-  '2012-9-26_13-33-6'
+  '2012-09-26_13-33-06'
 
 pycogworks.logging.writeHistoryFile
 -----------------------------------
