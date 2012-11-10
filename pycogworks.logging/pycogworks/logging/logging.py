@@ -70,3 +70,7 @@ class Logger():
                 line[self.header.index(k)] = str(v)
         self.file.write(self.delim.join(line))
         self.file.write(self.newline)
+        
+    def close(self):
+        if self.file != sys.__stdout__:
+            self.file.close()
