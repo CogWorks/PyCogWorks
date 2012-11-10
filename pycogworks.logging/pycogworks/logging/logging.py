@@ -52,16 +52,16 @@ def writeHistoryFile(filename, subjectInfo):
     
 class Logger():
     
-    def __init__(self, header, filename=None, delim="\t", newline="\n", filler="NA", compress=False):
+    def __init__(self, header, filename=None, delim="\t", newline="\n", filler="NA", compresslevel=0):
         self.header = header
         self.delim = delim
         self.newline = newline
         self.filler = filler
-        self.compress = compress
+        self.compresslevel = compresslevel
         if file:
-            if self.compress:
+            if self.compresslevel:
                 self.filename = "%s.gz" % filename
-                self.file = gzip.open(self.filename, "w")
+                self.file = gzip.open(self.filename, "w", self.compresslevel)
             else:
                 self.filename = filename
                 self.file = open(self.filename, "w")
