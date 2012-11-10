@@ -22,6 +22,7 @@ import datetime
 import time
 import platform
 import sys
+import gzip
 
 get_time = time.time
 if platform.system() == 'Windows':
@@ -51,25 +52,33 @@ def writeHistoryFile(filename, subjectInfo):
     
 class Logger():
     
-    def __init__(self, header, file=None, delim="\t", newline="\n", filler="NA"):
+    def __init__(self, header, filename=None, delim="\t", newline="\n", filler="NA", compress=False):
         self.header = header
         self.delim = delim
         self.newline = newline
         self.filler = filler
+        self.compress = compress
         if file:
-            self.file = open(file, "w")
+            if self.compress:
+                self.filename = "%s.gz" % filename
+                self.file = gzip.open(self.filename, "w")
+            else:
+                self.filename = filename
+                self.file = open(self.filename, "w")
         else:
+            self.filename = None
             self.file = sys.__stdout__
         self.file.write(self.delim.join(header))
         self.file.write(self.newline)
         
     def write(self, **kwargs):
-        line = [self.filler] * len(self.header)
-        for k, v in kwargs.iteritems():
-            if k in self.header:
-                line[self.header.index(k)] = str(v)
-        self.file.write(self.delim.join(line))
-        self.file.write(self.newline)
+        if self.file:
+            line = [self.filler] * len(self.header)
+            for k, v in kwargs.iteritems():
+                if k in self.header:
+                    line[self.header.index(k)] = str(v)
+            self.file.write(self.delim.join(line))
+            self.file.write(self.newline)
         
     def close(self):
         if self.file != sys.__stdout__:
