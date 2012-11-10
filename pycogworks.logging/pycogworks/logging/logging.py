@@ -83,3 +83,4 @@ class Logger():
     def close(self):
         if self.file != sys.__stdout__:
             self.file.close()
+            self.file = None
