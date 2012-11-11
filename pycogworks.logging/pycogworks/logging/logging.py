@@ -34,39 +34,31 @@ def getDateTimeStamp():
     return "%d-%02.d-%02.d_%02.d-%02.d-%02.d" % (d[0], d[1], d[2], d[3], d[4], d[5])
     
 def writeHistoryFile(filename, subjectInfo):
-    if 'rin' in subjectInfo:
-        rin = subjectInfo['rin']
-        if len(rin) != 9:
-            raise Exception("The 'rin' field value must have a length of 9.")
-        eid = rin2id(rin)
-        if 'encrypted_rin' in subjectInfo and subjectInfo['encrypted_rin'] != eid:
-            raise Exception("Invalid 'encrypted_rin' value for given 'rin'.")
-        else:
-            subjectInfo['encrypted_rin'] = eid
-            subjectInfo['cipher'] = 'AES/CBC (RIJNDAEL) - 16Byte Key'
-        history = open(filename, 'w')
-        history.write(json.dumps(subjectInfo, sort_keys=True, indent=4))
-        history.close()
-    else:
-        raise Exception("The 'subjectInfo' dict must contain a 'rin' field!")
+    if not 'rin' in subjectInfo:
+        raise Exception("Can't write history file, 'rin' field missing.")
+    elif not 'encrypted_rin' in subjectInfo:
+        raise Exception("Can't write history file, 'encrypted_rin' field missing.")
+    elif not 'cipher' in subjectInfo:
+        raise Exception("Can't write history file, 'cipher' field missing.")
+    history = open(filename, 'w')
+    history.write(json.dumps(subjectInfo, sort_keys=True, indent=4))
+    history.close()
     
 class Logger():
     
-    def __init__(self, header, filename=None, delim="\t", newline="\n", filler="NA", compresslevel=0):
+    def __init__(self, header, delim="\t", newline="\n", filler="NA"):
         self.header = header
         self.delim = delim
         self.newline = newline
         self.filler = filler
-        self.compresslevel = compresslevel
+        
+    def open(self, filename, compresslevel=0):
         if file:
             if self.compresslevel:
-                self.filename = "%s.gz" % filename
-                self.file = gzip.open(self.filename, "w", self.compresslevel)
+                self.file = gzip.open("%s.gz" % filename, "w", self.compresslevel)
             else:
-                self.filename = filename
-                self.file = open(self.filename, "w")
+                self.file = open(filename, "w")
         else:
-            self.filename = None
             self.file = sys.__stdout__
         self.file.write(self.delim.join(header))
         self.file.write(self.newline)
