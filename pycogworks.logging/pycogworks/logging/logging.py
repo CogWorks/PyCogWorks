@@ -22,6 +22,7 @@ import datetime
 import time
 import platform
 import sys
+import os
 import gzip
 
 get_time = time.time
@@ -51,16 +52,17 @@ class Logger():
         self.delim = delim
         self.newline = newline
         self.filler = filler
+        self.file = None
         
-    def open(self, filename, compresslevel=0):
-        if file:
-            if self.compresslevel:
-                self.file = gzip.open("%s.gz" % filename, "w", self.compresslevel)
+    def open(self, f=sys.__stdout__, compresslevel=0):
+        if isinstance(f, str):
+            if compresslevel:
+                self.file = gzip.open("%s.gz" % f, "w", compresslevel)
             else:
-                self.file = open(filename, "w")
+                self.file = open(f, "w")
         else:
-            self.file = sys.__stdout__
-        self.file.write(self.delim.join(header))
+            self.file = f
+        self.file.write(self.delim.join(self.header))
         self.file.write(self.newline)
         
     def write(self, **kwargs):
@@ -72,7 +74,12 @@ class Logger():
             self.file.write(self.delim.join(line))
             self.file.write(self.newline)
         
-    def close(self):
-        if self.file != sys.__stdout__:
+    def close(self, delete=False):
+        if self.file and self.file != sys.__stdout__:
             self.file.close()
+            if delete and hasattr(self.file, "name") and os.path.exists(self.file.name):
+                os.remove(self.file.name)
             self.file = None
+            
+    def delete(self):
+        self.close(True)
