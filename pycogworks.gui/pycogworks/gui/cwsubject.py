@@ -77,22 +77,14 @@ class SubjectWindow(QDialog):
         self.move((screen.width()-size.width())/2, (screen.height()-size.height())/2)
         
     def rin_changed(self, rin):
-        if len(rin) == 9:
-            try:
-                if int(rin) > 0:
-                    self.ok.setEnabled(True)
-            except ValueError:
-                pass
-        else:
-            self.ok.setEnabled(False)
-    
+        self.ok.setEnabled(unicode(rin).isnumeric() and len(rin) == 9)
+        
     def mainbutton_clicked(self, button):
         if button == self.ok:
             self.values = {}
             for field in self.field_widgets:
                 self.values[field.lower().replace(" ","_")] = self.field_widgets[field].text()
-            self.values['encrypted_rin'] = rin2id(self.values['rin'])
-            self.values['cipher'] = 'AES/CBC (RIJNDAEL) - 16Byte Key'
+            self.values['encrypted_rin'], self.values['cipher'] = rin2id(self.values['rin'])
             self.setResult(True)
             self.done(True)
         elif button == self.cancel:
